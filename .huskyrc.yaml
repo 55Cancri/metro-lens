@@ -1,2 +1,2 @@
 husky:
-  pre-commit: npx yarn test
+  pre-commit: npm test
