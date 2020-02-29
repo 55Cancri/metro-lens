@@ -1,0 +1,125 @@
+root: true
+
+# parser: babel-eslint
+parser: "@typescript-eslint/parser"
+
+parserOptions:
+  ecmaVersion: 2019
+  sourceType: module
+  project: tsconfig.json
+  ecmaFeatures:
+    jsx: true
+    module: true
+
+# settings:
+#   import/parsers:
+#     "@typescript-eslint/parser": [.ts, .tsx]
+# import/resolver:
+#   typescript: {}
+
+extends:
+  # not all ESLint core rules are compatible with TypeScript, so you need to add both eslint:recommended and plugin:@typescript-eslint/eslint-recommended (which will adjust the one from ESLint appropriately for TypeScript) to your config
+  - plugin:@typescript-eslint/eslint-recommended
+  - plugin:@typescript-eslint/recommended
+  - plugin:@typescript-eslint/recommended-requiring-type-checking
+  - plugin:@typescript-eslint
+  # https://github.com/yannickcr/eslint-plugin-react
+  - plugin:react/recommended
+  # https://www.npmjs.com/package/eslint-plugin-jest
+  - plugin:jest/recommended
+  # https://www.npmjs.com/package/eslint-config-airbnb-base
+  - airbnb
+  # https://github.com/prettier/eslint-config-prettier
+  - prettier
+  - prettier/react
+
+plugins:
+  - "@typescript-eslint"
+  - react
+  - import
+  - jest
+  # https://github.com/prettier/eslint-plugin-prettier
+  - prettier
+
+env:
+  es6: true
+  browser: true
+  node: true
+  jest: true
+  jest/globals: true
+
+rules:
+  ### Different from airbnb config
+
+  ### Styling ###
+
+  # Prefer new line before return
+  # http://eslint.org/docs/rules/newline-before-return
+  newline-before-return: error # airbnb default: off
+
+  ### Variables ###
+
+  # Functions and classes can be used before declaration
+  # http://eslint.org/docs/rules/no-use-before-define
+  no-use-before-define: # airbnb default: ['error', { functions: true, classes: true, variables: true }]
+    - error
+    - functions: false
+      classes: false
+      variables: true
+
+  ### From error to warning ###
+  # was not working when used with flow prop types
+  no-unused-vars: warn
+
+  # handled by eslint
+  "@typescript-eslint/no-unused-vars": off
+  react/no-unused-prop-types: warn
+
+  # stupid rule
+  "@typescript-eslint/explicit-function-return-type": off
+
+  ### ES6 ###
+
+  ### Best practices ###
+  # require or disallow Yoda conditions
+  # https://eslint.org/docs/rules/yoda
+  yoda: [error, never, { exceptRange: true }] # airbnb default: 'error'
+
+  # add curly braces all the time
+  # https://eslint.org/docs/rules/curly
+  curly: [error, all] # airbnb default: [error, multi-line]
+
+  ### Import ###
+
+  # Require modules with a single export to use a default export
+  # https://github.com/benmosher/eslint-plugin-import/blob/master/docs/rules/prefer-default-export.md
+  import/prefer-default-export: off # airbnb default: 'error'
+
+  # https://github.com/benmosher/eslint-plugin-import/blob/master/docs/rules/imports-first.md
+  import/first: off # airbnb default: ['error', 'absolute-first']
+
+  ### Debugging is allowed but not allowed to commit ###
+  no-console: warn # airbnb default: 'error'
+  no-debugger: warn # airbnb default: 'error'
+
+  ### React ###
+  # do not force jsx use js
+  # https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/jsx-filename-extension.md
+  react/jsx-filename-extension: off
+
+  # Require stateless functions when not using lifecycle methods, setState or ref
+  # https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/prefer-stateless-function.md
+  react/prefer-stateless-function: warn # airbnb default: 'error'
+
+  # Enforce a defaultProps definition for every prop that is not a required prop
+  # reason: function composition over default props
+  # https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/require-default-props.md
+  react/require-default-props: off # airbnb default: 'error'
+
+  ### Removed rules
+  # no longer defined
+  jsx-a11y/href-no-hash: off
+
+  # was complaining about inline snapshots
+  no-irregular-whitespace:
+    - off
