@@ -1,6 +1,7 @@
 {
   "name": "metro-lens",
   "version": "0.1.0",
+  "license": "UNLICENSED",
   "bin": {
     "metro-lens": "bin/metro-lens.js"
   },
@@ -17,10 +18,13 @@
     "@aws-cdk/aws-sns": "1.26.0",
     "@aws-cdk/aws-sns-subscriptions": "1.26.0",
     "@aws-cdk/aws-sqs": "1.26.0",
-    "@aws-cdk/core": "1.26.0"
+    "@aws-cdk/core": "1.26.0",
+    "husky": "^4.2.3"
   },
   "devDependencies": {
     "@aws-cdk/assert": "1.26.0",
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
     "@types/jest": "^24.0.22",
     "@types/node": "10.17.5",
     "@typescript-eslint/eslint-plugin": "^2.21.0",
@@ -36,7 +40,6 @@
     "eslint-plugin-jsx-a11y": "^6.2.3",
     "eslint-plugin-prettier": "^3.1.2",
     "eslint-plugin-react": "^7.18.3",
-    "husky": "^4.2.3",
     "jest": "^24.9.0",
     "prettier": "^1.19.1",
     "ts-jest": "^24.1.0",
