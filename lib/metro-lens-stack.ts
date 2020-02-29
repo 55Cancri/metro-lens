@@ -8,28 +8,38 @@ import * as cloudfront from "@aws-cdk/aws-cloudfront"
 import * as route53 from "@aws-cdk/aws-route53"
 import * as alias from "@aws-cdk/aws-route53-targets"
 
+interface StackProps extends cdk.StackProps {
+  uiDirectory: string
+  environmentName: string
+  resourcePrefix: string
+  // certificateArn: process.env.ACM_CERTIFCATE_ARN!,
+  hostedZoneId: string
+  hostedZoneName: string
+  aliasRecordName: string
+}
+
 export class MetroLensStack extends cdk.Stack {
-  private BUCKET_NAME = "metro-lens-client"
+  // private BUCKET_NAME = "metro-lens-client"
 
   // private DOMAIN_NAME = "metro-lens.com"
 
-  private HOSTED_ZONE_NAME = "metro-lens.com."
+  // private HOSTED_ZONE_NAME = "metro-lens.com."
 
-  private HOSTED_ZONE_ID = "ZYM0V5BTMV4P1"
+  // private HOSTED_ZONE_ID = "ZYM0V5BTMV4P1"
 
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+  constructor(scope: cdk.App, id: string, props?: StackProps) {
     /**
      * Passing `this` to each construct scopes the construct to the stack
      */
     super(scope, id, props)
 
-    const environment = this.createEnvironment()
+    // source the ui files
+    const source = s3Deployment.Source.asset(props?.uiDirectory!)
 
-    // source the spa files
-    const source = s3Deployment.Source.asset("../client/build")
+    const bucketName = props?.resourcePrefix + "-client"
 
     // create the s3 bucket
-    const bucket = this.createBucket(this.BUCKET_NAME)
+    const bucket = this.createBucket(bucketName)
 
     // put ui in s3 bucket
     this.deploySourceToBucket(bucket, source)
@@ -39,8 +49,8 @@ export class MetroLensStack extends cdk.Stack {
 
     // create route 53
     const hostedZone = this.createRoute53(
-      this.HOSTED_ZONE_NAME,
-      this.HOSTED_ZONE_ID,
+      props?.hostedZoneName!,
+      props?.hostedZoneId!,
       distribution
     )
 
@@ -59,7 +69,7 @@ export class MetroLensStack extends cdk.Stack {
     // topic.addSubscription(new subs.SqsSubscription(queue))
   }
 
-  private createEnvironment = (account: string, region: string) => {
+  private createEnvironment = (account?: string, region?: string) => {
     // const account = !account ? System.getenv("CDK_DEFAULT_ACCOUNT") : account
     // const region = !region ? System.getenv("CDK_DEFAULT_REGION") : region
 
@@ -113,7 +123,7 @@ export class MetroLensStack extends cdk.Stack {
       //   aliases: [domainName]
       // }),
       defaultRootObject: "index.html",
-      comment: 'The Metro Lens cloudfront.'
+      comment: "The Metro Lens cloudfront.",
       originConfigs: [
         {
           s3OriginSource: { s3BucketSource: bucket },
