@@ -2,90 +2,144 @@ import * as sns from "@aws-cdk/aws-sns"
 import * as subs from "@aws-cdk/aws-sns-subscriptions"
 import * as sqs from "@aws-cdk/aws-sqs"
 import * as cdk from "@aws-cdk/core"
-import { Bucket, BlockPublicAccess } from "@aws-cdk/aws-s3"
-import { BucketDeployment, Source } from "@aws-cdk/aws-s3-deployment"
-import { CloudFrontWebDistribution } from "@aws-cdk/aws-cloudfront"
-import { RemovalPolicy } from "@aws-cdk/core"
+import * as s3 from "@aws-cdk/aws-s3"
+import * as s3Deployment from "@aws-cdk/aws-s3-deployment"
+import * as cloudfront from "@aws-cdk/aws-cloudfront"
+import * as route53 from "@aws-cdk/aws-route53"
+import * as alias from "@aws-cdk/aws-route53-targets"
 
 export class MetroLensStack extends cdk.Stack {
-    constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
-        super(scope, id, props)
+  private BUCKET_NAME = "metro-lens-client"
 
-        // source the spa files
-        const source = Source.asset("../client/build")
+  // private DOMAIN_NAME = "metro-lens.com"
 
-        // create the s3 bucket
-        const bucket = this.createBucket()
+  private HOSTED_ZONE_NAME = "metro-lens.com."
 
-        // put spa in s3 bucket
-        this.deploySourceToBucket(bucket)
+  private HOSTED_ZONE_ID = "ZYM0V5BTMV4P1"
 
-        // create cloudfront
-        this.createCloudFront(bucket)
+  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+    /**
+     * Passing `this` to each construct scopes the construct to the stack
+     */
+    super(scope, id, props)
 
-        // create route 53
+    const environment = this.createEnvironment()
 
-        // potentially apigateway
+    // source the spa files
+    const source = s3Deployment.Source.asset("../client/build")
 
-        // potentially lambda to handle requests
+    // create the s3 bucket
+    const bucket = this.createBucket(this.BUCKET_NAME)
 
-        // potentially dynamodb if users or metrics should be recorded
+    // put ui in s3 bucket
+    this.deploySourceToBucket(bucket, source)
 
-        // const queue = new sqs.Queue(this, 'MetroLensQueue', {
-        //   visibilityTimeout: cdk.Duration.seconds(300)
-        // })
+    // create cloudfront
+    const distribution = this.createCloudFront(bucket)
 
-        // const topic = new sns.Topic(this, 'MetroLensTopic')
+    // create route 53
+    const hostedZone = this.createRoute53(
+      this.HOSTED_ZONE_NAME,
+      this.HOSTED_ZONE_ID,
+      distribution
+    )
 
-        // topic.addSubscription(new subs.SqsSubscription(queue))
-    }
+    // potentially apigateway
 
-    private createBucket = () =>
-        new Bucket(this, "client", {
-            bucketName: "metro-lens-client",
-            websiteIndexDocument: "index.html",
-            websiteErrorDocument: "index.html",
-            blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-            // completely destroy bucket with cdk destroy
-            removalPolicy: RemovalPolicy.DESTROY,
-            // only cloudfront can read the bucket
-            publicReadAccess: false,
-            // upload a new file on each upload
-            versioned: true,
-        })
+    // potentially lambda to handle requests
 
-    private deploySourceToBucket = (bucket: Bucket, source: Source) =>
-        new BucketDeployment(this, `BucketDeployment`, {
-            sources: [source],
-            destinationBucket: bucket,
-        })
+    // potentially dynamodb if users or metrics should be recorded
 
-    private createCloudFront = (bucket: Bucket, hostedZone) => {
-        // // ?
-        // const domainName = `${subdomain}.${hostedZone.zoneName}`
+    // const queue = new sqs.Queue(this, 'MetroLensQueue', {
+    //   visibilityTimeout: cdk.Duration.seconds(300)
+    // })
 
-        // // ?
-        // const certificate = new DnsValidatedCertificate(this, 'SiteCertificate', {
-        //   region: 'us-east-1',
-        //   domainName,
-        //   hostedZone
-        // })
+    // const topic = new sns.Topic(this, 'MetroLensTopic')
 
-        // // ?
-        // new CfnOutput(this, 'URL', { value: `https://${domainName}/` })
+    // topic.addSubscription(new subs.SqsSubscription(queue))
+  }
 
-        return new CloudFrontWebDistribution(this, "CloudFront", {
-            // ?
-            // viewerCertificate: ViewerCertificate.fromAcmCertificate(certificate, {
-            //   // ?
-            //   aliases: [domainName]
-            // }),
-            originConfigs: [
-                {
-                    s3OriginSource: { s3BucketSource: bucket },
-                    behaviors: [{ isDefaultBehavior: true }],
-                },
-            ],
-        })
-    }
+  private createEnvironment = (account: string, region: string) => {
+    // const account = !account ? System.getenv("CDK_DEFAULT_ACCOUNT") : account
+    // const region = !region ? System.getenv("CDK_DEFAULT_REGION") : region
+
+    return { account, region }
+  }
+
+  private createBucket = (bucketName: string) =>
+    new s3.Bucket(this, bucketName, {
+      bucketName,
+      /* redirect success requests to index.html */
+      websiteIndexDocument: "index.html",
+      /* redirect error requests to index.html */
+      websiteErrorDocument: "index.html",
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      /* completely destroy bucket during cdk destroy */
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      /* only cloudfront can read the bucket */
+      publicReadAccess: false,
+      /* upload a new file on each upload */
+      versioned: true,
+    })
+
+  private deploySourceToBucket = (
+    bucket: s3.Bucket,
+    uiDirectory: s3Deployment.ISource
+  ) =>
+    new s3Deployment.BucketDeployment(this, `BucketDeployment`, {
+      sources: [uiDirectory],
+      destinationBucket: bucket,
+    })
+
+  /* The cloudfront fronts the S3 bucket. It also needs to invalidate the Cloudfront cache when new files are uploaded to the S3 bucket. */
+  private createCloudFront = (bucket: s3.Bucket) => {
+    /* A route 53 hosted zone — containing records for the public facing domain and routing information to call the Cloudfront endpoint */
+    // const domainName = `${subdomain}.${hostedZone.zoneName}`
+
+    /* And a SSL certificate if we want to serve HTTPS traffic — that is served by the Cloudfront distribution */
+    // const certificate = new DnsValidatedCertificate(this, 'SiteCertificate', {
+    //   region: 'us-east-1',
+    //   domainName,
+    //   hostedZone
+    // })
+
+    // // ?
+    // new CfnOutput(this, 'URL', { value: `https://${domainName}/` })
+
+    return new cloudfront.CloudFrontWebDistribution(this, "CloudFront", {
+      // ?
+      // viewerCertificate: ViewerCertificate.fromAcmCertificate(certificate, {
+      //   // ?
+      //   aliases: [domainName]
+      // }),
+      defaultRootObject: "index.html",
+      comment: 'The Metro Lens cloudfront.'
+      originConfigs: [
+        {
+          s3OriginSource: { s3BucketSource: bucket },
+          behaviors: [{ isDefaultBehavior: true }],
+        },
+      ],
+    })
+  }
+
+  private createRoute53 = (
+    hostedZoneName: string,
+    hostedZoneId: string,
+    distribution: cloudfront.CloudFrontWebDistribution
+  ) => {
+    /* find the hosted zone that was manually created after purchasing a domain name from the wizard */
+    const zone = route53.HostedZone.fromLookup(this, hostedZoneId, {
+      domainName: hostedZoneName,
+    })
+
+    const target = route53.RecordTarget.fromAlias(
+      new alias.CloudFrontTarget(distribution)
+    )
+
+    return new route53.ARecord(this, "AliasRecord", {
+      zone,
+      target,
+    })
+  }
 }

@@ -20,6 +20,18 @@
     "@aws-cdk/cx-api" "1.26.0"
     minimatch "^3.0.4"
 
+"@aws-cdk/aws-apigateway@1.26.0":
+  version "1.26.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-apigateway/-/aws-apigateway-1.26.0.tgz#539685524cf757a259333a1b16fd7ede92c254bb"
+  integrity sha512-cGV/MCEPP76Zz40pxN4Xuzxt88VoGGTmlAKeBoFNeuVqY6hzg8Iinr7k4qlg6RqNQCDKr/yqKRsyPZ0w1+HqKg==
+  dependencies:
+    "@aws-cdk/aws-certificatemanager" "1.26.0"
+    "@aws-cdk/aws-ec2" "1.26.0"
+    "@aws-cdk/aws-elasticloadbalancingv2" "1.26.0"
+    "@aws-cdk/aws-iam" "1.26.0"
+    "@aws-cdk/aws-lambda" "1.26.0"
+    "@aws-cdk/core" "1.26.0"
+
 "@aws-cdk/aws-certificatemanager@1.26.0":
   version "1.26.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-certificatemanager/-/aws-certificatemanager-1.26.0.tgz#a3f83f3f17f9b154b1a69cdfd0d5a15e7a72cedb"
@@ -76,6 +88,27 @@
     "@aws-cdk/core" "1.26.0"
     "@aws-cdk/cx-api" "1.26.0"
 
+"@aws-cdk/aws-elasticloadbalancing@1.26.0":
+  version "1.26.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-elasticloadbalancing/-/aws-elasticloadbalancing-1.26.0.tgz#b368e8fd30bf5247a7843bf71bfe84c195fda361"
+  integrity sha512-xO/9wvOxaiZtOMNAdX/EdEgAaQPdyt5EcfUL2Cr7Ws/uWGmBqs0IPLff+nE5nQ69XMpCeLMqsPFXgPMb7Rb4gQ==
+  dependencies:
+    "@aws-cdk/aws-ec2" "1.26.0"
+    "@aws-cdk/core" "1.26.0"
+
+"@aws-cdk/aws-elasticloadbalancingv2@1.26.0":
+  version "1.26.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-elasticloadbalancingv2/-/aws-elasticloadbalancingv2-1.26.0.tgz#e472d0b9f345fb19762e8b3dc0017fcc3910ec84"
+  integrity sha512-BFiNiby61sgig1oGvpqfwSdciI4QwHx3lGuZkcHfKRi8MGoLOde8PAavrg16Vx4GFVCWXwdbjEZutFPG3+Jx9g==
+  dependencies:
+    "@aws-cdk/aws-certificatemanager" "1.26.0"
+    "@aws-cdk/aws-cloudwatch" "1.26.0"
+    "@aws-cdk/aws-ec2" "1.26.0"
+    "@aws-cdk/aws-iam" "1.26.0"
+    "@aws-cdk/aws-lambda" "1.26.0"
+    "@aws-cdk/aws-s3" "1.26.0"
+    "@aws-cdk/core" "1.26.0"
+
 "@aws-cdk/aws-events@1.26.0":
   version "1.26.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-events/-/aws-events-1.26.0.tgz#5d074e56133efffa7080ef403600d095c700e653"
@@ -124,6 +157,22 @@
     "@aws-cdk/aws-cloudwatch" "1.26.0"
     "@aws-cdk/aws-iam" "1.26.0"
     "@aws-cdk/core" "1.26.0"
+
+"@aws-cdk/aws-route53-targets@^1.26.0":
+  version "1.26.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-route53-targets/-/aws-route53-targets-1.26.0.tgz#993594e92622fbfe51787ca6f74c6473d9553f5e"
+  integrity sha512-BBxwfxap7maTMGnNp8t0zjkh4tDo3nq9Ua9GcoeyqQVqYbjJpjImUhSZ5Xc73LH0Ub/CjtbhMnW5k91rH/Psxw==
+  dependencies:
+    "@aws-cdk/aws-apigateway" "1.26.0"
+    "@aws-cdk/aws-cloudfront" "1.26.0"
+    "@aws-cdk/aws-ec2" "1.26.0"
+    "@aws-cdk/aws-elasticloadbalancing" "1.26.0"
+    "@aws-cdk/aws-elasticloadbalancingv2" "1.26.0"
+    "@aws-cdk/aws-iam" "1.26.0"
+    "@aws-cdk/aws-route53" "1.26.0"
+    "@aws-cdk/aws-s3" "1.26.0"
+    "@aws-cdk/core" "1.26.0"
+    "@aws-cdk/region-info" "1.26.0"
 
 "@aws-cdk/aws-route53@1.26.0":
   version "1.26.0"
