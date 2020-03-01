@@ -158,12 +158,12 @@ export class MetroLensStack extends cdk.Stack {
     const { aliasRecordName, certificateArn } = props
 
     /* define an array of the domain names */
-    const domainNames = [aliasRecordName]
+    const domainNames = [aliasRecordName, "www." + aliasRecordName]
 
     /* create an OAI user */
     const oaiUser = this.helpers.cloudfront.getOriginIdentityAccessUser()
 
-    /* source the certificate that was manually generated in ACM */
+    /* source the certificate that was manually generated in ACM. Ensure all the regions match. */
     const acmCertificate = this.helpers.cloudfront.getAcmCertificate(
       certificateArn,
       id

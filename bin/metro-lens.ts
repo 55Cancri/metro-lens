@@ -48,7 +48,7 @@ const synth = async (): Promise<number> => {
     certificateArn: process.env.ACM_CERTIFICATE_ARN!,
     hostedZoneId: process.env.HOSTED_ZONE_ID!,
     hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-    aliasRecordName: process.env.DOMAIN_NAME_ALIAS!,
+    aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION,

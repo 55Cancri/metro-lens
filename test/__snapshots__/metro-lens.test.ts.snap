@@ -3,16 +3,16 @@
 exports[`CloudFront Created 1`] = `
 Object {
   "Parameters": Object {
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962ArtifactHash107FA3A4": Object {
-      "Description": "Artifact hash for asset \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fArtifactHash1951B32F": Object {
+      "Description": "Artifact hash for asset \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9": Object {
-      "Description": "S3 bucket for asset \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B": Object {
+      "Description": "S3 bucket for asset \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD": Object {
-      "Description": "S3 key for asset version \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2": Object {
+      "Description": "S3 key for asset version \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
     "AssetParametersa9125fa9a40550c71cde90bd478cc23091e868067a12380c1df0827d013ad2ffArtifactHash08605F5E": Object {
@@ -52,6 +52,12 @@ Object {
         "DestinationBucketName": Object {
           "Ref": "atlanticmetrolensclientA0FCA384",
         },
+        "DistributionId": Object {
+          "Ref": "CloudFrontCFDistribution57EFBAC6",
+        },
+        "DistributionPaths": Array [
+          "/*",
+        ],
         "ServiceToken": Object {
           "Fn::GetAtt": Array [
             "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
@@ -60,7 +66,7 @@ Object {
         },
         "SourceBucketNames": Array [
           Object {
-            "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+            "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
           },
         ],
         "SourceObjectKeys": Array [
@@ -75,7 +81,7 @@ Object {
                       "Fn::Split": Array [
                         "||",
                         Object {
-                          "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD",
+                          "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2",
                         },
                       ],
                     },
@@ -88,7 +94,7 @@ Object {
                       "Fn::Split": Array [
                         "||",
                         Object {
-                          "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD",
+                          "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2",
                         },
                       ],
                     },
@@ -105,7 +111,24 @@ Object {
     "CloudFrontCFDistribution57EFBAC6": Object {
       "Properties": Object {
         "DistributionConfig": Object {
-          "Comment": "The Metro Lens cloudfront.",
+          "Aliases": Array [
+            "www.undefined",
+          ],
+          "Comment": "The cloudfront distribution for metro-lens.com.",
+          "CustomErrorResponses": Array [
+            Object {
+              "ErrorCachingMinTTL": 300,
+              "ErrorCode": 403,
+              "ResponseCode": 200,
+              "ResponsePagePath": "/index.html",
+            },
+            Object {
+              "ErrorCachingMinTTL": 300,
+              "ErrorCode": 404,
+              "ResponseCode": 200,
+              "ResponsePagePath": "/index.html",
+            },
+          ],
           "DefaultCacheBehavior": Object {
             "AllowedMethods": Array [
               "GET",
@@ -138,12 +161,26 @@ Object {
                 ],
               },
               "Id": "origin1",
-              "S3OriginConfig": Object {},
+              "S3OriginConfig": Object {
+                "OriginAccessIdentity": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "origin-access-identity/cloudfront/",
+                      Object {
+                        "Ref": "OAI",
+                      },
+                    ],
+                  ],
+                },
+              },
             },
           ],
           "PriceClass": "PriceClass_100",
           "ViewerCertificate": Object {
-            "CloudFrontDefaultCertificate": true,
+            "AcmCertificateArn": "arn:aws:acm:us-east-1:707446208631:certificate/6311befd-39f0-48a6-be8d-1f8274f77371",
+            "MinimumProtocolVersion": "TLSv1.2_2018",
+            "SslSupportMethod": "sni-only",
           },
         },
       },
@@ -258,7 +295,7 @@ Object {
                       },
                       ":s3:::",
                       Object {
-                        "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+                        "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
                       },
                     ],
                   ],
@@ -273,7 +310,7 @@ Object {
                       },
                       ":s3:::",
                       Object {
-                        "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+                        "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
                       },
                       "/*",
                     ],
@@ -314,6 +351,14 @@ Object {
                 },
               ],
             },
+            Object {
+              "Action": Array [
+                "cloudfront:GetInvalidation",
+                "cloudfront:CreateInvalidation",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -325,6 +370,14 @@ Object {
         ],
       },
       "Type": "AWS::IAM::Policy",
+    },
+    "OAI": Object {
+      "Properties": Object {
+        "CloudFrontOriginAccessIdentityConfig": Object {
+          "Comment": "Necessary for CloudFront to gain access to the bucket.",
+        },
+      },
+      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
     },
     "atlanticmetrolensclientA0FCA384": Object {
       "DeletionPolicy": "Delete",
@@ -346,6 +399,66 @@ Object {
       },
       "Type": "AWS::S3::Bucket",
       "UpdateReplacePolicy": "Delete",
+    },
+    "atlanticmetrolensclientPolicy2B31514D": Object {
+      "Properties": Object {
+        "Bucket": Object {
+          "Ref": "atlanticmetrolensclientA0FCA384",
+        },
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+              ],
+              "Effect": "Allow",
+              "Principal": Object {
+                "AWS": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::cloudfront:user/CloudFront Origin Access Identity ",
+                      Object {
+                        "Ref": "OAI",
+                      },
+                    ],
+                  ],
+                },
+              },
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "atlanticmetrolensclientA0FCA384",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "atlanticmetrolensclientA0FCA384",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::S3::BucketPolicy",
     },
   },
 }
@@ -354,16 +467,16 @@ Object {
 exports[`S3 Bucket Created 1`] = `
 Object {
   "Parameters": Object {
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962ArtifactHash107FA3A4": Object {
-      "Description": "Artifact hash for asset \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fArtifactHash1951B32F": Object {
+      "Description": "Artifact hash for asset \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9": Object {
-      "Description": "S3 bucket for asset \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B": Object {
+      "Description": "S3 bucket for asset \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
-    "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD": Object {
-      "Description": "S3 key for asset version \\"3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962\\"",
+    "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2": Object {
+      "Description": "S3 key for asset version \\"a082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817f\\"",
       "Type": "String",
     },
     "AssetParametersa9125fa9a40550c71cde90bd478cc23091e868067a12380c1df0827d013ad2ffArtifactHash08605F5E": Object {
@@ -403,6 +516,12 @@ Object {
         "DestinationBucketName": Object {
           "Ref": "atlanticmetrolensclientA0FCA384",
         },
+        "DistributionId": Object {
+          "Ref": "CloudFrontCFDistribution57EFBAC6",
+        },
+        "DistributionPaths": Array [
+          "/*",
+        ],
         "ServiceToken": Object {
           "Fn::GetAtt": Array [
             "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
@@ -411,7 +530,7 @@ Object {
         },
         "SourceBucketNames": Array [
           Object {
-            "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+            "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
           },
         ],
         "SourceObjectKeys": Array [
@@ -426,7 +545,7 @@ Object {
                       "Fn::Split": Array [
                         "||",
                         Object {
-                          "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD",
+                          "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2",
                         },
                       ],
                     },
@@ -439,7 +558,7 @@ Object {
                       "Fn::Split": Array [
                         "||",
                         Object {
-                          "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3VersionKey3B2E7DAD",
+                          "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3VersionKeyD1DE7CA2",
                         },
                       ],
                     },
@@ -456,7 +575,24 @@ Object {
     "CloudFrontCFDistribution57EFBAC6": Object {
       "Properties": Object {
         "DistributionConfig": Object {
-          "Comment": "The Metro Lens cloudfront.",
+          "Aliases": Array [
+            "www.undefined",
+          ],
+          "Comment": "The cloudfront distribution for metro-lens.com.",
+          "CustomErrorResponses": Array [
+            Object {
+              "ErrorCachingMinTTL": 300,
+              "ErrorCode": 403,
+              "ResponseCode": 200,
+              "ResponsePagePath": "/index.html",
+            },
+            Object {
+              "ErrorCachingMinTTL": 300,
+              "ErrorCode": 404,
+              "ResponseCode": 200,
+              "ResponsePagePath": "/index.html",
+            },
+          ],
           "DefaultCacheBehavior": Object {
             "AllowedMethods": Array [
               "GET",
@@ -489,12 +625,26 @@ Object {
                 ],
               },
               "Id": "origin1",
-              "S3OriginConfig": Object {},
+              "S3OriginConfig": Object {
+                "OriginAccessIdentity": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "origin-access-identity/cloudfront/",
+                      Object {
+                        "Ref": "OAI",
+                      },
+                    ],
+                  ],
+                },
+              },
             },
           ],
           "PriceClass": "PriceClass_100",
           "ViewerCertificate": Object {
-            "CloudFrontDefaultCertificate": true,
+            "AcmCertificateArn": "arn:aws:acm:us-east-1:707446208631:certificate/6311befd-39f0-48a6-be8d-1f8274f77371",
+            "MinimumProtocolVersion": "TLSv1.2_2018",
+            "SslSupportMethod": "sni-only",
           },
         },
       },
@@ -609,7 +759,7 @@ Object {
                       },
                       ":s3:::",
                       Object {
-                        "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+                        "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
                       },
                     ],
                   ],
@@ -624,7 +774,7 @@ Object {
                       },
                       ":s3:::",
                       Object {
-                        "Ref": "AssetParameters3dabc4950223117b27dcef9d2984e763a934f9eb9aa081ba7173e2f1a91d5962S3BucketDA51AFB9",
+                        "Ref": "AssetParametersa082d6f3d32dd72ed5262a7b62157bc3b3a6d9278ef9fce352f2035348ba817fS3BucketE26AEA4B",
                       },
                       "/*",
                     ],
@@ -665,6 +815,14 @@ Object {
                 },
               ],
             },
+            Object {
+              "Action": Array [
+                "cloudfront:GetInvalidation",
+                "cloudfront:CreateInvalidation",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -676,6 +834,14 @@ Object {
         ],
       },
       "Type": "AWS::IAM::Policy",
+    },
+    "OAI": Object {
+      "Properties": Object {
+        "CloudFrontOriginAccessIdentityConfig": Object {
+          "Comment": "Necessary for CloudFront to gain access to the bucket.",
+        },
+      },
+      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
     },
     "atlanticmetrolensclientA0FCA384": Object {
       "DeletionPolicy": "Delete",
@@ -697,6 +863,66 @@ Object {
       },
       "Type": "AWS::S3::Bucket",
       "UpdateReplacePolicy": "Delete",
+    },
+    "atlanticmetrolensclientPolicy2B31514D": Object {
+      "Properties": Object {
+        "Bucket": Object {
+          "Ref": "atlanticmetrolensclientA0FCA384",
+        },
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+              ],
+              "Effect": "Allow",
+              "Principal": Object {
+                "AWS": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "arn:",
+                      Object {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::cloudfront:user/CloudFront Origin Access Identity ",
+                      Object {
+                        "Ref": "OAI",
+                      },
+                    ],
+                  ],
+                },
+              },
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "atlanticmetrolensclientA0FCA384",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "atlanticmetrolensclientA0FCA384",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::S3::BucketPolicy",
     },
   },
 }

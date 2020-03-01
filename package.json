@@ -28,8 +28,10 @@
     }
   },
   "scripts": {
-    "build": "tsc",
     "watch": "tsc -w",
+    "inspection": "npm run build && npm run test",
+    "build": "tsc && echo 'Finished compiling files. No TypeScript errors found.'",
+    "snapshot": "jest -u --coverage",
     "test": "jest --coverage",
     "cdk": "cdk"
   },
