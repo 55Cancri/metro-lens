@@ -33,7 +33,8 @@
     "build": "tsc && echo 'Finished compiling files. No TypeScript errors found.'",
     "snapshot": "jest -u --coverage",
     "test": "jest --coverage",
-    "cdk": "cdk"
+    "deploy": "./deploy.sh",
+    "cdk-deploy": "cdk deploy"
   },
   "dependencies": {
     "@aws-cdk/aws-certificatemanager": "^1.26.0",
