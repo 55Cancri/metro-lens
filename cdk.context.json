@@ -1,4 +1,8 @@
 {
   "@aws-cdk/core:enableStackNameDuplicates": "true",
-  "aws-cdk:enableDiffNoFail": "true"
+  "aws-cdk:enableDiffNoFail": "true",
+  "hosted-zone:account=707446208631:domainName=metro-lens.com.:region=us-east-1": {
+    "Id": "/hostedzone/ZYM0V5BTMV4P1",
+    "Name": "metro-lens.com."
+  }
 }

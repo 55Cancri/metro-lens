@@ -25,12 +25,17 @@ const synth = async (): Promise<number> => {
   const app = new cdk.App({ autoSynth: false })
 
   /* the node variable contains the context free */
-  const stagingEnvironment: Environments = app.node.tryGetContext(STAGE)
+  const stagingEnvironment: Environments =
+    app.node.tryGetContext(STAGE) || "atlantic"
 
   if (stagingEnvironment) {
     configEnvironment(stagingEnvironment)
   } else {
-    throw new Error("No Staging variable provided")
+    const message = chalk.bold.black.bgRed.inverse(
+      "Error during cdk synth: No Staging variable provided."
+    )
+    console.error(message)
+    return process.exit(1)
   }
 
   const appName = "metro-lens"
@@ -40,10 +45,10 @@ const synth = async (): Promise<number> => {
     uiDirectory: UI_DIRECTORY,
     environmentName: process.env.ENV_NAME!,
     resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
-    // certificateArn: process.env.ACM_CERTIFCATE_ARN!,
+    certificateArn: process.env.ACM_CERTIFICATE_ARN!,
     hostedZoneId: process.env.HOSTED_ZONE_ID!,
     hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-    aliasRecordName: process.env.UI_DOMAIN_ALIAS!,
+    aliasRecordName: process.env.DOMAIN_NAME_ALIAS!,
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.CDK_DEFAULT_REGION,
@@ -62,5 +67,7 @@ const synth = async (): Promise<number> => {
 
 /* handle failure to create cloudformation */
 synth().catch((error: Error) => {
-  console.error(chalk.bold.bgRed.inverse("Error during cdk synth.", error))
+  console.error(
+    chalk.bold.black.bgRed.inverse("Error during `cdk synth`:", error)
+  )
 })

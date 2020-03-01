@@ -23,6 +23,7 @@ const props = {
   resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
   hostedZoneId: process.env.HOSTED_ZONE_ID!,
   hostedZoneName: process.env.HOSTED_ZONE_NAME!,
+  certificateArn: process.env.ACM_CERTIFICATE_ARN!,
   aliasRecordName: process.env.UI_DOMAIN_ALIAS!,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,

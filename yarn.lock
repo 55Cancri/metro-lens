@@ -32,7 +32,7 @@
     "@aws-cdk/aws-lambda" "1.26.0"
     "@aws-cdk/core" "1.26.0"
 
-"@aws-cdk/aws-certificatemanager@1.26.0":
+"@aws-cdk/aws-certificatemanager@1.26.0", "@aws-cdk/aws-certificatemanager@^1.26.0":
   version "1.26.0"
   resolved "https://registry.yarnpkg.com/@aws-cdk/aws-certificatemanager/-/aws-certificatemanager-1.26.0.tgz#a3f83f3f17f9b154b1a69cdfd0d5a15e7a72cedb"
   integrity sha512-ycDWvXi31ytA2kv+WrczWaUFWZ3XZH+w6v5zxsxuZWRnmIpvHM51TsjVzaV/+uULaRGGZeeT9I6mTihVeZ1fgg==
