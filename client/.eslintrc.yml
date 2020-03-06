@@ -1,0 +1,61 @@
+extends:
+  - react-app
+  - plugin:@typescript-eslint/eslint-recommended
+  - plugin:@typescript-eslint/recommended
+  # - plugin:@typescript-eslint/recommended-requiring-type-checking
+  - plugin:react/recommended
+  # - plugin:jest/recommended
+  - airbnb
+  # - prettier
+  # - prettier/react
+
+plugins:
+  - '@typescript-eslint/eslint-plugin'
+  - react
+
+parser: '@typescript-eslint/parser'
+
+parserOptions:
+  # sourceType: module
+  # project: tsconfig.json
+  ecmaFeatures:
+    jsx: true
+
+settings:
+  import/parsers:
+    '@typescript-eslint/parser': [.ts, .tsx]
+  import/resolver:
+    typescript: {}
+
+rules:
+  # no semi-colons
+  semi: 0
+  # handled by typescript
+  no-unused-vars: 0
+  # error on unused vars (except React!)
+  '@typescript-eslint/no-unused-vars': [error, { varsIgnorePattern: 'React' }]
+  '@typescript-eslint/quotes': [error, single]
+  # however, types will have semicolons
+  '@typescript-eslint/semi': off
+  # some api parameters
+  '@typescript-eslint/camelcase': [off]
+  '@typescript-eslint/explicit-function-return-type': 'off'
+  react/jsx-uses-react: [1]
+  react/jsx-uses-vars: [1]
+  react/react-in-jsx-scope: [1]
+
+  # allow jsx in .tsx file
+  'react/jsx-filename-extension':
+    ['error', { 'extensions': [.js, .jsx, .ts, .tsx] }]
+  # allow console.log and console.error
+  no-console: 0
+  # allow arrow function on new line, not always beside
+  implicit-arrow-linebreak: 0
+  # allow closing parenthesis on new line
+  function-paren-newline: 0
+  # conflicts with prettier
+  object-curly-newline: 0
+  # conflicts with prettier
+  comma-dangle: 0
+  'import/extensions':
+    [error, ignorePackages, { js: never, jsx: never, ts: never, tsx: never }]

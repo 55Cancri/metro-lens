@@ -1,13 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ES2015",
+    "lib": ["dom", "dom.iterable", "esnext", "ES2020"],
     "allowJs": true,
-    "skipLibCheck": true,
+    // original true
+    "skipLibCheck": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -16,10 +13,13 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "downlevelIteration": true,
     "noEmit": true,
-    "jsx": "react"
+    "jsx": "react",
+    "typeRoots": ["types"]
   },
-  "include": [
-    "src"
-  ]
+  "ts-node": {
+    "files": true
+  },
+  "include": ["src", "types"]
 }

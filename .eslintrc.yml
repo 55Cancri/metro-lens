@@ -1,7 +1,7 @@
 root: true
 
 # parser: babel-eslint
-parser: "@typescript-eslint/parser"
+parser: '@typescript-eslint/parser'
 
 parserOptions:
   ecmaVersion: 2019
@@ -13,28 +13,24 @@ parserOptions:
 
 settings:
   import/parsers:
-    "@typescript-eslint/parser": [.ts, .tsx]
+    '@typescript-eslint/parser': [.ts, .tsx]
   import/resolver:
     typescript: {}
 
 extends:
   # not all ESLint core rules are compatible with TypeScript, so you need to add both eslint:recommended and plugin:@typescript-eslint/eslint-recommended (which will adjust the one from ESLint appropriately for TypeScript) to your config
-  - plugin:@typescript-eslint/eslint-recommended
-  - plugin:@typescript-eslint/recommended
-  - plugin:@typescript-eslint/recommended-requiring-type-checking
-  - plugin:@typescript-eslint
-  # https://github.com/yannickcr/eslint-plugin-react
+  - 'plugin:@typescript-eslint/eslint-recommended'
+  - 'plugin:@typescript-eslint/recommended'
+  - 'plugin:@typescript-eslint/recommended-requiring-type-checking'
+  - 'plugin:@typescript-eslint'
   - plugin:react/recommended
-  # https://www.npmjs.com/package/eslint-plugin-jest
   - plugin:jest/recommended
-  # https://www.npmjs.com/package/eslint-config-airbnb-base
   - airbnb
-  # https://github.com/prettier/eslint-config-prettier
   - prettier
   - prettier/react
 
 plugins:
-  - "@typescript-eslint"
+  - '@typescript-eslint'
   - react
   - import
   - jest
@@ -69,14 +65,14 @@ rules:
 
   ### From error to warning ###
   # was not working when used with flow prop types
-  no-unused-vars: warn
+  no-unused-vars: error
 
   # handled by eslint
-  "@typescript-eslint/no-unused-vars": off
+  '@typescript-eslint/no-unused-vars': error
   react/no-unused-prop-types: warn
 
   # stupid rule
-  "@typescript-eslint/explicit-function-return-type": off
+  '@typescript-eslint/explicit-function-return-type': off
 
   ### ES6 ###
 
