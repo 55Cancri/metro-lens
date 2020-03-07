@@ -6,14 +6,15 @@ extends:
   - plugin:react/recommended
   # - plugin:jest/recommended
   - airbnb
-  # - prettier
-  # - prettier/react
+  - prettier
+  - prettier/react
 
 plugins:
   - '@typescript-eslint/eslint-plugin'
+  - prettier
   - react
 
-parser: '@typescript-eslint/parser'
+# parser: '@typescript-eslint/parser'
 
 parserOptions:
   # sourceType: module
@@ -33,20 +34,21 @@ rules:
   # handled by typescript
   no-unused-vars: 0
   # error on unused vars (except React!)
-  '@typescript-eslint/no-unused-vars': [error, { varsIgnorePattern: 'React' }]
+  '@typescript-eslint/no-unused-vars': [warn, { varsIgnorePattern: 'React' }]
   '@typescript-eslint/quotes': [error, single]
-  # however, types will have semicolons
+  # no semi-colons
   '@typescript-eslint/semi': off
+  # no semi-colons for types too
+  '@typescript-eslint/member-delimiter-style': off
   # some api parameters
   '@typescript-eslint/camelcase': [off]
   '@typescript-eslint/explicit-function-return-type': 'off'
-  react/jsx-uses-react: [1]
-  react/jsx-uses-vars: [1]
-  react/react-in-jsx-scope: [1]
 
   # allow jsx in .tsx file
   'react/jsx-filename-extension':
     ['error', { 'extensions': [.js, .jsx, .ts, .tsx] }]
+  # conflicts with prettier
+  react/jsx-one-expression-per-line: off
   # allow console.log and console.error
   no-console: 0
   # allow arrow function on new line, not always beside
@@ -59,3 +61,4 @@ rules:
   comma-dangle: 0
   'import/extensions':
     [error, ignorePackages, { js: never, jsx: never, ts: never, tsx: never }]
+  import/prefer-default-export: 0

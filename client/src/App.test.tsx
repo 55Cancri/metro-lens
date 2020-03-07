@@ -1,9 +1,9 @@
-import React from "react"
-import { render } from "@testing-library/react"
-import App from "./app"
+import React from 'react'
+import { render } from '@testing-library/react'
+import { App } from './app'
 
-test("renders learn react link", () => {
+test('renders loading message', () => {
   const { getByText } = render(<App />)
-  const linkElement = getByText(/More react/i)
-  expect(linkElement).toBeInTheDocument()
+  const h1Element = getByText(/Metro lens/i)
+  expect(h1Element).toBeInTheDocument()
 })
