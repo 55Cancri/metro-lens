@@ -1,19 +1,23 @@
-import { expect as expectCDK, haveResource, SynthUtils } from "@aws-cdk/assert"
-import * as cdk from "@aws-cdk/core"
-import * as path from "path"
-import * as dotenv from "dotenv"
-import "jest-cdk-snapshot"
+import {
+  expect as expectCDK,
+  haveResource,
+  SynthUtils
+} from './node_modules/@aws-cdk/assert'
+import * as cdk from './node_modules/@aws-cdk/core'
+import * as path from 'path'
+import * as dotenv from './node_modules/dotenv'
+import './node_modules/jest-cdk-snapshot'
 
-import { MetroLensStack } from "../lib/metro-lens-stack"
+import { MetroLensStack } from '../lib/metro-lens-stack'
 
 /* define the path to the environment file */
-const toConfig = path.resolve(__dirname, "../staging") + "/.env.atlantic"
+const toConfig = path.resolve(__dirname, '../staging') + '/.env.atlantic'
 
 /* read the file in */
 dotenv.config({ path: toConfig })
 
-const appName = "metro-lens"
-const UI_DIRECTORY = "client/build"
+const appName = 'metro-lens'
+const UI_DIRECTORY = 'client/build'
 
 /* define the stack props */
 const props = {
@@ -27,22 +31,22 @@ const props = {
   aliasRecordName: process.env.UI_DOMAIN_ALIAS!,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
-  },
+    region: process.env.CDK_DEFAULT_REGION
+  }
 }
 
-test("S3 Bucket Created", () => {
+test('S3 Bucket Created', () => {
   const app = new cdk.App()
   // WHEN
-  const stack = new MetroLensStack(app, "MyTestStack", props)
+  const stack = new MetroLensStack(app, 'MyTestStack', props)
   // THEN
   expect(stack).toMatchCdkSnapshot()
 })
 
-test("CloudFront Created", () => {
+test('CloudFront Created', () => {
   const app = new cdk.App()
   // WHEN
-  const stack = new MetroLensStack(app, "MyTestStack", props)
+  const stack = new MetroLensStack(app, 'MyTestStack', props)
   // THEN
   expect(stack).toMatchCdkSnapshot()
 })

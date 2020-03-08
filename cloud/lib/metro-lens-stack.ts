@@ -1,13 +1,16 @@
-import * as sns from "@aws-cdk/aws-sns"
-import * as subs from "@aws-cdk/aws-sns-subscriptions"
-import * as sqs from "@aws-cdk/aws-sqs"
-import * as cdk from "@aws-cdk/core"
-import * as s3 from "@aws-cdk/aws-s3"
-import * as s3Deployment from "@aws-cdk/aws-s3-deployment"
-import * as cloudfront from "@aws-cdk/aws-cloudfront"
-import * as route53 from "@aws-cdk/aws-route53"
-import * as alias from "@aws-cdk/aws-route53-targets"
-import * as acm from "@aws-cdk/aws-certificatemanager"
+import * as sns from '@aws-cdk/aws-sns'
+import * as subs from '@aws-cdk/aws-sns-subscriptions'
+import * as sqs from '@aws-cdk/aws-sqs'
+import * as cdk from '@aws-cdk/core'
+import * as s3 from '@aws-cdk/aws-s3'
+import * as s3Deployment from '@aws-cdk/aws-s3-deployment'
+import * as lambda from '@aws-cdk/aws-lambda'
+import * as cloudfront from '@aws-cdk/aws-cloudfront'
+import * as events from '@aws-cdk/aws-events'
+import * as targets from '@aws-cdk/aws-events-targets'
+import * as route53 from '@aws-cdk/aws-route53'
+import * as alias from '@aws-cdk/aws-route53-targets'
+import * as acm from '@aws-cdk/aws-certificatemanager'
 
 interface StackProps extends cdk.StackProps {
   uiDirectory: string
@@ -27,6 +30,7 @@ export class MetroLensStack extends cdk.Stack {
    * - A hosted zone and record must be manually created for your domain name
    * - An ACM certificate must be manually created for your domain name
    * - The certificate ARN must be copied as an environment variable
+   * - In constructs of the form (scope: cdk.App, id: string, props?: StackProps), id is the construct id and only needs to be unique within the scope in which it is created. The identifier serves as a namespace for everything that's encapsulated within the scope's subtree and is used to allocate unique identities such as resource names and AWS CloudFormation logical IDs. The CDK uses this identity to calculate the CloudFormation Logical ID for each resource defined within this scope.
    */
   constructor(scope: cdk.App, id: string, props?: StackProps) {
     super(scope, id, props)
@@ -35,7 +39,7 @@ export class MetroLensStack extends cdk.Stack {
     const source = s3Deployment.Source.asset(props?.uiDirectory!)
 
     /* define the bucket name */
-    const bucketName = props?.resourcePrefix + "-client"
+    const bucketName = props?.resourcePrefix + '-client'
 
     /* create the s3 bucket */
     const bucket = this.createBucket(bucketName)
@@ -53,16 +57,53 @@ export class MetroLensStack extends cdk.Stack {
       distribution
     )
 
-    // potentially apigateway
+    // // create apigateway
 
-    // potentially lambda to handle requests
+    /* create appsync to interface with lambdas and dynamodb */
 
-    // potentially dynamodb if users or metrics should be recorded
+    /** create lambda to save updates to dynamodb and
+     *  trigger mutation in appsync
+     *  */
 
+    /* create dynamodb to interface with appsync (users and metrics) */
+
+    /* create lambda to make api bus calls every minute */
+    const metroPollingLambda = new lambda.Function(
+      this,
+      'metroPollingHandler',
+      {
+        runtime: lambda.Runtime.NODEJS_12_X,
+        /* code loaded from dist directory */
+        code: lambda.Code.fromAsset('lambda/dist'),
+        /* file is metro-polling, function is handler */
+        handler: 'metro-polling.handler',
+        description:
+          'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.'
+        // TODO: add function name for aws console
+        // functionName
+        // TODO: add layers for smaller deployment sizes
+        // layers
+      }
+    )
+
+    /* create a cloudwatch target from the lambda */
+    const metroPollingTarget = new targets.LambdaFunction(metroPollingLambda)
+
+    /* create cloudwatch 1 minute interval trigger for lambda */
+    new events.Rule(this, 'metroPollingSchedule', {
+      description:
+        'Call a lambda to poll wmata and fairfax connector apis to get the latest bus and rail predictions. The lambda will trigger an appsync mutation and save the latest data to dynamodb.',
+      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
+      /* attach the lambda to the schedule */
+      targets: [metroPollingTarget]
+    })
+
+    // create queue to send sms message to my phone
     // const queue = new sqs.Queue(this, 'MetroLensQueue', {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // })
 
+    // create to be subscribed to
     // const topic = new sns.Topic(this, 'MetroLensTopic')
 
     // topic.addSubscription(new subs.SqsSubscription(queue))
@@ -75,9 +116,9 @@ export class MetroLensStack extends cdk.Stack {
       ): cloudfront.CfnDistribution.CustomErrorResponseProperty => ({
         errorCode,
         responseCode: 200,
-        responsePagePath: "/index.html",
-        errorCachingMinTtl: 300,
-      }),
+        responsePagePath: '/index.html',
+        errorCachingMinTtl: 300
+      })
     },
     cloudfront: {
       /* get the certificate from aws by its arn, then attach to cloudfront */
@@ -93,45 +134,45 @@ export class MetroLensStack extends cdk.Stack {
           /* define the method (SSL protocol) by which cloudfront encrypts traffic over HTTPS connections */
           securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2018,
           // default, CloudFront can use SNI to host multiple distributions on the same IP - which a large majority of clients will support.
-          sslMethod: cloudfront.SSLMethod.SNI,
+          sslMethod: cloudfront.SSLMethod.SNI
         }),
       /* An Origin Access Identity is a virtual CloudFront user that is used to gain access to private content from your S3 bucket. Without this, cloudfront is like an anonymous user. Note that even though an OAI user is an IAM subject that can be referenced in a resource policy, it does not create a full-fledged IAM user, so you don't see it in IAM and cannot attach policies to it directly. Also note that currently, OAI only works for S3 bucket origins. */
       getOriginIdentityAccessUser: () => {
         /* The function will request an OAI user and a ref will be returned to it. */
         const cloudFrontOaiRef = new cloudfront.CfnCloudFrontOriginAccessIdentity(
           this,
-          "OAI",
+          'OAI',
           {
             cloudFrontOriginAccessIdentityConfig: {
-              comment: `Necessary for CloudFront to gain access to the bucket.`,
-            },
+              comment: `Necessary for CloudFront to gain access to the bucket.`
+            }
           }
         )
 
         /* The actual OAI user can then be created below when the ref above is passed as a parameter. */
         return cloudfront.OriginAccessIdentity.fromOriginAccessIdentityName(
           this,
-          "OAIImported",
+          'OAIImported',
           cloudFrontOaiRef.ref
         )
-      },
-    },
+      }
+    }
   }
 
   private createBucket = (bucketName: string) =>
     new s3.Bucket(this, bucketName, {
       bucketName,
       /* redirect success requests to index.html */
-      websiteIndexDocument: "index.html",
+      websiteIndexDocument: 'index.html',
       /* redirect error requests to index.html */
-      websiteErrorDocument: "index.html",
+      websiteErrorDocument: 'index.html',
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       /* completely destroy bucket during cdk destroy */
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       /* only cloudfront can read the bucket */
       publicReadAccess: false,
       /* upload a new file on each upload */
-      versioned: true,
+      versioned: true
     })
 
   private deploySourceToBucket = (
@@ -143,9 +184,9 @@ export class MetroLensStack extends cdk.Stack {
       sources: [uiSource],
       destinationBucket: bucket,
       /* the file paths to invalidate in the CloudFront distribution */
-      distributionPaths: ["/*"],
+      distributionPaths: ['/*'],
       /* the CloudFront distribution that has sole access to the bucket */
-      distribution,
+      distribution
     })
 
   /* The cloudfront fronts the S3 bucket. It also needs to invalidate the Cloudfront cache when new files are uploaded to the S3 bucket. */
@@ -158,7 +199,7 @@ export class MetroLensStack extends cdk.Stack {
     const { aliasRecordName, certificateArn } = props
 
     /* define an array of the domain names */
-    const domainNames = [aliasRecordName, "www." + aliasRecordName]
+    const domainNames = [aliasRecordName, 'www.' + aliasRecordName]
 
     /* create an OAI user */
     const oaiUser = this.helpers.cloudfront.getOriginIdentityAccessUser()
@@ -180,18 +221,18 @@ export class MetroLensStack extends cdk.Stack {
     const errorConfig404 = this.helpers.s3.getErrorConfig(404)
 
     /* create the cloudformation */
-    return new cloudfront.CloudFrontWebDistribution(this, "CloudFront", {
-      comment: "The cloudfront distribution for metro-lens.com.",
+    return new cloudfront.CloudFrontWebDistribution(this, 'CloudFront', {
+      comment: 'The cloudfront distribution for metro-lens.com.',
       originConfigs: [
         {
           s3OriginSource: {
             /* specify the bucket that the cloudfront will read from  */
             s3BucketSource: bucket,
             /* attach the OAI user to the cloudfront so that it can access the s3 bucket contents */
-            originAccessIdentity: oaiUser,
+            originAccessIdentity: oaiUser
           },
-          behaviors: [{ isDefaultBehavior: true }],
-        },
+          behaviors: [{ isDefaultBehavior: true }]
+        }
       ],
       /* attach to the certificate to the cloudfront */
       viewerCertificate,
@@ -200,7 +241,7 @@ export class MetroLensStack extends cdk.Stack {
       /* redirect all errors back to the react page */
       errorConfigurations: [errorConfig403, errorConfig404],
       /* The default object to serve. Not sure what would happen without this. */
-      defaultRootObject: "index.html",
+      defaultRootObject: 'index.html'
     })
   }
 
@@ -212,7 +253,7 @@ export class MetroLensStack extends cdk.Stack {
     // TODO: add environment prefix to route 53 domain names. Already happening for s3 bucket and cloudfront.
     /* find the hosted zone that was manually created after purchasing a domain name from the wizard */
     const zone = route53.HostedZone.fromLookup(this, hostedZoneId, {
-      domainName: hostedZoneName,
+      domainName: hostedZoneName
     })
 
     /* get a reference to the cloudfront domain */
@@ -221,9 +262,9 @@ export class MetroLensStack extends cdk.Stack {
     )
 
     /* route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
-    return new route53.ARecord(this, "AliasRecord", {
+    return new route53.ARecord(this, 'AliasRecord', {
       zone,
-      target,
+      target
     })
   }
 }

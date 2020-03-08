@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-import * as path from "path"
-import * as dotenv from "dotenv"
-import * as cdk from "@aws-cdk/core"
-import * as chalk from "chalk"
-import { MetroLensStack } from "../lib/metro-lens-stack"
+import * as path from 'path'
+import * as dotenv from 'dotenv'
+import * as cdk from '@aws-cdk/core'
+import * as chalk from 'chalk'
+import { MetroLensStack } from '../lib/metro-lens-stack'
 
-const STAGE = "stage"
-const ENVIRONMENTS = ["atlantic", "pacific"] as const
-const UI_DIRECTORY = "client/build"
+const STAGE = 'stage'
+const ENVIRONMENTS = ['atlantic', 'pacific'] as const
+const UI_DIRECTORY = '../client/build'
 
 type Environments = typeof ENVIRONMENTS[number]
 
 const configEnvironment = (environment: Environments) => {
-  const parentDirectory = path.resolve(__dirname, "..")
+  const parentDirectory = path.resolve(__dirname, '..')
   if (ENVIRONMENTS.includes(environment)) {
     dotenv.config({
-      path: `${parentDirectory}/staging/.env.${environment}`,
+      path: `${parentDirectory}/staging/.env.${environment}`
     })
   }
 }
@@ -26,19 +26,19 @@ const synth = async (): Promise<number> => {
 
   /* the node variable contains the context free */
   const stagingEnvironment: Environments =
-    app.node.tryGetContext(STAGE) || "atlantic"
+    app.node.tryGetContext(STAGE) || 'atlantic'
 
   if (stagingEnvironment) {
     configEnvironment(stagingEnvironment)
   } else {
     const message = chalk.bold.black.bgRed.inverse(
-      "Error during cdk synth: No Staging variable provided."
+      'Error during cdk synth: No Staging variable provided.'
     )
     console.error(message)
     return process.exit(1)
   }
 
-  const appName = "metro-lens"
+  const appName = 'metro-lens'
 
   const props = {
     appName,
@@ -51,12 +51,12 @@ const synth = async (): Promise<number> => {
     aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
     env: {
       account: process.env.CDK_DEFAULT_ACCOUNT,
-      region: process.env.CDK_DEFAULT_REGION,
-    },
+      region: process.env.CDK_DEFAULT_REGION
+    }
   }
 
   /* initialize the stack */
-  new MetroLensStack(app, "MetroLensStack", props)
+  new MetroLensStack(app, 'MetroLensStack', props)
 
   /* create the cloudformation template in cdk.out */
   app.synth()
@@ -68,6 +68,6 @@ const synth = async (): Promise<number> => {
 /* handle failure to create cloudformation */
 synth().catch((error: Error) => {
   console.error(
-    chalk.bold.black.bgRed.inverse("Error during `cdk synth`:", error)
+    chalk.bold.black.bgRed.inverse('Error during `cdk synth`:', error)
   )
 })
