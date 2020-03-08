@@ -1,4 +1,4 @@
 hooks:
-  pre-commit: yarn test
+  post-commit: yarn test
   commit-msg: commitlint -E HUSKY_GIT_PARAMS
-  pre-push: yarn test
+  pre-push: ./test.sh

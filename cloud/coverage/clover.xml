@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1583632357480" clover="3.2.0">
-  <project timestamp="1583632357480" name="All files">
+<coverage generated="1583660760829" clover="3.2.0">
+  <project timestamp="1583660760829" name="All files">
     <metrics statements="44" coveredstatements="44" conditionals="16" coveredconditionals="12" methods="9" coveredmethods="9" elements="69" coveredelements="65" complexity="0" loc="44" ncloc="44" packages="1" files="1" classes="1"/>
     <file name="metro-lens-stack.ts" path="/Users/ericmorrison/Documents/code/apps/metro-lens/cloud/lib/metro-lens-stack.ts">
       <metrics statements="44" coveredstatements="44" conditionals="16" coveredconditionals="12" methods="9" coveredmethods="9"/>
@@ -23,31 +23,31 @@
       <line num="51" count="5" type="stmt"/>
       <line num="54" count="5" type="stmt"/>
       <line num="71" count="5" type="stmt"/>
-      <line num="90" count="5" type="stmt"/>
-      <line num="93" count="5" type="stmt"/>
-      <line num="112" count="5" type="stmt"/>
-      <line num="116" count="10" type="stmt"/>
-      <line num="126" count="5" type="stmt"/>
-      <line num="132" count="5" type="stmt"/>
-      <line num="142" count="5" type="stmt"/>
-      <line num="153" count="5" type="stmt"/>
-      <line num="162" count="5" type="stmt"/>
-      <line num="163" count="5" type="stmt"/>
-      <line num="178" count="5" type="stmt"/>
-      <line num="183" count="5" type="stmt"/>
-      <line num="193" count="5" type="stmt"/>
-      <line num="199" count="5" type="stmt"/>
-      <line num="202" count="5" type="stmt"/>
-      <line num="205" count="5" type="stmt"/>
-      <line num="208" count="5" type="stmt"/>
-      <line num="214" count="5" type="stmt"/>
-      <line num="220" count="5" type="stmt"/>
-      <line num="221" count="5" type="stmt"/>
+      <line num="94" count="5" type="stmt"/>
+      <line num="97" count="5" type="stmt"/>
+      <line num="116" count="5" type="stmt"/>
+      <line num="120" count="10" type="stmt"/>
+      <line num="130" count="5" type="stmt"/>
+      <line num="136" count="5" type="stmt"/>
+      <line num="146" count="5" type="stmt"/>
+      <line num="157" count="5" type="stmt"/>
+      <line num="166" count="5" type="stmt"/>
+      <line num="167" count="5" type="stmt"/>
+      <line num="182" count="5" type="stmt"/>
+      <line num="187" count="5" type="stmt"/>
+      <line num="197" count="5" type="stmt"/>
+      <line num="203" count="5" type="stmt"/>
+      <line num="206" count="5" type="stmt"/>
+      <line num="209" count="5" type="stmt"/>
+      <line num="212" count="5" type="stmt"/>
+      <line num="218" count="5" type="stmt"/>
       <line num="224" count="5" type="stmt"/>
-      <line num="248" count="5" type="stmt"/>
-      <line num="255" count="5" type="stmt"/>
-      <line num="260" count="5" type="stmt"/>
-      <line num="265" count="5" type="stmt"/>
+      <line num="225" count="5" type="stmt"/>
+      <line num="228" count="5" type="stmt"/>
+      <line num="252" count="5" type="stmt"/>
+      <line num="259" count="5" type="stmt"/>
+      <line num="264" count="5" type="stmt"/>
+      <line num="269" count="5" type="stmt"/>
     </file>
   </project>
 </coverage>

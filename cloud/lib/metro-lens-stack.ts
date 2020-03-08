@@ -78,7 +78,11 @@ export class MetroLensStack extends cdk.Stack {
         /* file is metro-polling, function is handler */
         handler: 'metro-polling.handler',
         description:
-          'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.'
+          'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
+        environment: {
+          WMATA_KEY: process.env.WMATA_KEY!,
+          CONNECTOR_KEY: process.env.CONNECTOR_KEY!
+        }
         // TODO: add function name for aws console
         // functionName
         // TODO: add layers for smaller deployment sizes
