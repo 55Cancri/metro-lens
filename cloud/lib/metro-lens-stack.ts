@@ -11,6 +11,10 @@ import * as targets from '@aws-cdk/aws-events-targets'
 import * as route53 from '@aws-cdk/aws-route53'
 import * as alias from '@aws-cdk/aws-route53-targets'
 import * as acm from '@aws-cdk/aws-certificatemanager'
+import * as dotenv from 'dotenv'
+
+/* setup dotenv to read environment variables */
+dotenv.config()
 
 interface StackProps extends cdk.StackProps {
   uiDirectory: string
