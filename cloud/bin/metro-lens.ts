@@ -7,7 +7,10 @@ import { MetroLensStack } from '../lib/metro-lens-stack'
 
 const STAGE = 'stage'
 const ENVIRONMENTS = ['atlantic', 'pacific'] as const
+
+/* should be relative to where it will be used, e.g. lib/metro-lens-stack.ts */
 const UI_DIRECTORY = '../client/build'
+const SCHEMA_DIRECTORY = 'graphql/schema.graphql'
 
 type Environments = typeof ENVIRONMENTS[number]
 
@@ -43,6 +46,7 @@ const synth = async (): Promise<number> => {
   const props = {
     appName,
     uiDirectory: UI_DIRECTORY,
+    schemaDirectory: SCHEMA_DIRECTORY,
     environmentName: process.env.ENV_NAME!,
     resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
     certificateArn: process.env.ACM_CERTIFICATE_ARN!,

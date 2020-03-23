@@ -1,10 +1,9 @@
 import * as lambda from 'aws-lambda'
-console.log('Attempting axios import...')
 import axios from 'axios'
 
 export const handler = async (
   event?: lambda.APIGatewayEvent
-): Promise<string> => {
+): Promise<any[]> => {
   const wmata = await axios.get(
     'https://api.wmata.com/NextBusService.svc/json/jPredictions',
     {
@@ -26,8 +25,9 @@ export const handler = async (
   )
 
   console.log(`[${new Date().toLocaleString()}]: Hello World!`)
-  console.log(wmata)
-  console.log(connector)
+  console.log(wmata.data)
+  console.log(connector.data)
   const response = JSON.stringify(event, null, 2)
-  return response
+  // return response
+  return [{ id: '1', name: 'oneone' }]
 }

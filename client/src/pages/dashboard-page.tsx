@@ -18,6 +18,17 @@ const styles: Styles = {
   padding: '20px 50px'
 }
 
+const inputStyles: Styles = {
+  display: 'grid',
+  height: 25,
+  width: '50%',
+  padding: '4px 10px',
+  border: 0,
+  outline: 0,
+  borderRadius: 4,
+  backgroundColor: '#e6e6e6'
+}
+
 const initialState = { wmata: {}, connector: {} }
 
 export const DashboardPage: React.FC = () => {
@@ -236,6 +247,7 @@ export const DashboardPage: React.FC = () => {
     >
       <header>
         <h1>Metro Lens</h1>
+        <input css={inputStyles} />
       </header>
       <main>
         <div>

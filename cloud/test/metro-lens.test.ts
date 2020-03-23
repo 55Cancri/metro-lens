@@ -15,11 +15,13 @@ dotenv.config({ path: toConfig })
 
 const appName = 'metro-lens'
 const UI_DIRECTORY = '../client/build'
+const SCHEMA_DIRECTORY = './graphql/schema.graphql'
 
 /* define the stack props */
 const props = {
   appName,
   uiDirectory: UI_DIRECTORY,
+  schemaDirectory: SCHEMA_DIRECTORY,
   environmentName: process.env.ENV_NAME!,
   resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
   hostedZoneId: process.env.HOSTED_ZONE_ID!,

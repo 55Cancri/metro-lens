@@ -1,3 +1,4 @@
+import path from 'path'
 import * as sns from '@aws-cdk/aws-sns'
 import * as subs from '@aws-cdk/aws-sns-subscriptions'
 import * as sqs from '@aws-cdk/aws-sqs'
@@ -5,6 +6,7 @@ import * as cdk from '@aws-cdk/core'
 import * as s3 from '@aws-cdk/aws-s3'
 import * as s3Deployment from '@aws-cdk/aws-s3-deployment'
 import * as lambda from '@aws-cdk/aws-lambda'
+import * as appsync from '@aws-cdk/aws-appsync'
 import * as cloudfront from '@aws-cdk/aws-cloudfront'
 import * as events from '@aws-cdk/aws-events'
 import * as targets from '@aws-cdk/aws-events-targets'
@@ -18,6 +20,7 @@ dotenv.config()
 
 interface StackProps extends cdk.StackProps {
   uiDirectory: string
+  schemaDirectory: string
   environmentName: string
   resourcePrefix: string
   certificateArn: string
@@ -40,7 +43,7 @@ export class MetroLensStack extends cdk.Stack {
     super(scope, id, props)
 
     /* source the ui files */
-    const source = s3Deployment.Source.asset(props?.uiDirectory!)
+    const s3Source = s3Deployment.Source.asset(props?.uiDirectory!)
 
     /* define the bucket name */
     const bucketName = props?.resourcePrefix + '-client'
@@ -52,7 +55,7 @@ export class MetroLensStack extends cdk.Stack {
     const distribution = this.createCloudFront(props!, bucket, id)
 
     /* put the ui in s3 bucket and allow cloudfront to access the bucket */
-    this.deploySourceToBucket(bucket, source, distribution)
+    this.deploySourceToBucket(bucket, s3Source, distribution)
 
     /* update the route 53 */
     const hostedZone = this.updateRoute53(
@@ -61,15 +64,74 @@ export class MetroLensStack extends cdk.Stack {
       distribution
     )
 
-    // // create apigateway
+    /* create dynamodb to interface with appsync (users and metrics) */
 
     /* create appsync to interface with lambdas and dynamodb */
+    const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
+      name: 'metrolens-graphql-api',
+      logConfig: {
+        /* log every resolver */
+        fieldLogLevel: appsync.FieldLogLevel.ALL
+      },
 
-    /** create lambda to save updates to dynamodb and
-     *  trigger mutation in appsync
-     *  */
+      // authorizationConfig: {
+      //   defaultAuthorization: {
+      //     // TODO: add another field
+      //     // userPool,
+      //     defaultAction: appsync.UserPoolDefaultAction.ALLOW
+      //   },
+      //   additionalAuthorizationModes: [
+      //     {
+      //       apiKeyDesc: 'My API Key'
+      //     }
+      //   ]
+      // },
+      schemaDefinitionFile: props?.schemaDirectory
+    })
 
-    /* create dynamodb to interface with appsync (users and metrics) */
+    /* appsync: create lambda */
+    const appsyncLambda = new lambda.Function(this, 'appsyncTestLambda', {
+      // code: lambda.Code.fromInline(
+      //   'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
+      // ),
+      runtime: lambda.Runtime.NODEJS_12_X,
+      handler: 'index.handler'
+    })
+
+    /* appsync: add lambda */
+    const lambdaDataSource = graphql.addLambdaDataSource(
+      'appsyncLambda',
+      'Lambda triggered by appsync',
+      appsyncLambda
+    )
+
+    lambdaDataSource.createResolver({
+      typeName: 'Query',
+      fieldName: 'getUsers',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult()
+    })
+
+    lambdaDataSource.createResolver({
+      typeName: 'Query',
+      fieldName: 'getUser',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult()
+    })
+
+    const layer = new lambda.LayerVersion(this, 'CommonLayer', {
+      /**
+       * lambda.Code.fromAsset(path) specifies a directory or a .zip
+       * file in the local filesystem which will be zipped and uploaded
+       * to S3 before deployment.
+       * Note: import the ./layers, not ./layers/nodejs. "nodejs" must be
+       * the top-level directory.
+       * https://medium.com/@anjanava.biswas/nodejs-runtime-environment-with-aws-lambda-layers-f3914613e20e
+       * */
+      code: lambda.Code.fromAsset(path.join(__dirname, '../layers')),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_12_X],
+      description: 'Layer for Metro Lens lambdas.'
+    })
 
     /* create lambda to make api bus calls every minute */
     const metroPollingLambda = new lambda.Function(
@@ -81,6 +143,9 @@ export class MetroLensStack extends cdk.Stack {
         code: lambda.Code.fromAsset('lambda/dist'),
         /* file is metro-polling, function is handler */
         handler: 'metro-polling.handler',
+        /* include reuseable node modles */
+        layers: [layer],
+
         description:
           'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
         environment: {
@@ -89,8 +154,6 @@ export class MetroLensStack extends cdk.Stack {
         }
         // TODO: add function name for aws console
         // functionName
-        // TODO: add layers for smaller deployment sizes
-        // layers
       }
     )
 
