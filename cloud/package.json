@@ -38,6 +38,7 @@
     "build": "tsc",
     "snapshot": "jest -u --coverage",
     "test": "jest --coverage",
+    "test-watch": "jest --watchAll --coverage",
     "deploy": "../deploy.sh",
     "cdk-deploy": "cdk deploy"
   },

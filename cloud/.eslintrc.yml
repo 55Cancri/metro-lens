@@ -1,15 +1,13 @@
-root: true
+# root: true
 
 # parser: babel-eslint
-parser: '@typescript-eslint/parser'
+# parser: '@typescript-eslint/parser'
 
 parserOptions:
-  ecmaVersion: 2019
-  sourceType: module
-  project: tsconfig.json
+  # sourceType: module
+  # project: tsconfig.json
   ecmaFeatures:
     jsx: true
-    module: true
 
 settings:
   import/parsers:
@@ -19,22 +17,17 @@ settings:
 
 extends:
   # not all ESLint core rules are compatible with TypeScript, so you need to add both eslint:recommended and plugin:@typescript-eslint/eslint-recommended (which will adjust the one from ESLint appropriately for TypeScript) to your config
-  - 'plugin:@typescript-eslint/eslint-recommended'
-  - 'plugin:@typescript-eslint/recommended'
-  - 'plugin:@typescript-eslint/recommended-requiring-type-checking'
-  - 'plugin:@typescript-eslint'
+  - plugin:@typescript-eslint/eslint-recommended
+  - plugin:@typescript-eslint/recommended
   - plugin:react/recommended
   - plugin:jest/recommended
   - airbnb
   - prettier
-  - prettier/react
 
 plugins:
-  - '@typescript-eslint'
-  - react
+  - '@typescript-eslint/eslint-plugin'
   - import
   - jest
-  # https://github.com/prettier/eslint-plugin-prettier
   - prettier
 
 env:
@@ -69,7 +62,6 @@ rules:
 
   # handled by eslint
   '@typescript-eslint/no-unused-vars': error
-  react/no-unused-prop-types: warn
 
   # stupid rule
   '@typescript-eslint/explicit-function-return-type': off

@@ -3,8 +3,6 @@ import * as cdkAssert from '@aws-cdk/assert'
 import * as cdk from '@aws-cdk/core'
 import * as path from 'path'
 import * as dotenv from 'dotenv'
-// import 'jest-cdk-snapshot'
-
 import { MetroLensStack } from '../lib/metro-lens-stack'
 
 /* define the path to the environment file */
@@ -13,26 +11,29 @@ const toConfig = path.resolve(__dirname, '../staging') + '/.env.atlantic'
 /* read the file in */
 dotenv.config({ path: toConfig })
 
-const appName = 'metro-lens'
+/* should be loaded after dotenv has read the environment variables */
+import { props, appName } from '../bin/metro-lens'
+
 const UI_DIRECTORY = '../client/build'
 const SCHEMA_DIRECTORY = './graphql/schema.graphql'
 
 /* define the stack props */
-const props = {
-  appName,
-  uiDirectory: UI_DIRECTORY,
-  schemaDirectory: SCHEMA_DIRECTORY,
-  environmentName: process.env.ENV_NAME!,
-  resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
-  hostedZoneId: process.env.HOSTED_ZONE_ID!,
-  hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-  certificateArn: process.env.ACM_CERTIFICATE_ARN!,
-  aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION
-  }
-}
+// const props = {
+//   appName,
+//   email: process.env.EMAIL!,
+//   uiDirectory: UI_DIRECTORY,
+//   schemaDirectory: SCHEMA_DIRECTORY,
+//   environmentName: process.env.ENV_NAME!,
+//   resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
+//   hostedZoneId: process.env.HOSTED_ZONE_ID!,
+//   hostedZoneName: process.env.HOSTED_ZONE_NAME!,
+//   certificateArn: process.env.ACM_CERTIFICATE_ARN!,
+//   aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
+//   env: {
+//     account: process.env.CDK_DEFAULT_ACCOUNT,
+//     region: process.env.CDK_DEFAULT_REGION,
+//   },
+// }
 
 test('S3 bucket created', () => {
   /* create app */
@@ -44,7 +45,7 @@ test('S3 bucket created', () => {
   /* make assertion */
   cdkAssert.expect(stack).to(
     cdkAssert.haveResource('AWS::S3::Bucket', {
-      BucketName: 'atlantic-metro-lens-client'
+      BucketName: 'atlantic-metro-lens-client',
     })
   )
 })
@@ -84,8 +85,8 @@ test('CloudFront OAI user created', () => {
   cdkAssert.expect(stack).to(
     cdkAssert.haveResource('AWS::CloudFront::CloudFrontOriginAccessIdentity', {
       CloudFrontOriginAccessIdentityConfig: {
-        Comment: 'Necessary for CloudFront to gain access to the bucket.'
-      }
+        Comment: 'Necessary for CloudFront to gain access to the bucket.',
+      },
     })
   )
 })

@@ -1,6 +1,6 @@
 import path from 'path'
 import * as sns from '@aws-cdk/aws-sns'
-import * as subs from '@aws-cdk/aws-sns-subscriptions'
+import * as subscriptions from '@aws-cdk/aws-sns-subscriptions'
 import * as sqs from '@aws-cdk/aws-sqs'
 import * as cdk from '@aws-cdk/core'
 import * as s3 from '@aws-cdk/aws-s3'
@@ -17,19 +17,12 @@ import * as alias from '@aws-cdk/aws-route53-targets'
 import * as acm from '@aws-cdk/aws-certificatemanager'
 import * as dotenv from 'dotenv'
 
+import { props } from '../bin/metro-lens'
+
 /* setup dotenv to read environment variables */
 dotenv.config()
 
-interface StackProps extends cdk.StackProps {
-  uiDirectory: string
-  schemaDirectory: string
-  environmentName: string
-  resourcePrefix: string
-  certificateArn: string
-  hostedZoneId: string
-  hostedZoneName: string
-  aliasRecordName: string
-}
+type StackProps = cdk.StackProps & typeof props {}
 
 export class MetroLensStack extends cdk.Stack {
   /**
@@ -195,7 +188,6 @@ export class MetroLensStack extends cdk.Stack {
       targets: [scribeTarget],
     })
 
-    // const lambdaAuditor = new lambda.Function(this, 'auditor', {
     const lambdaAuditor = new nodejs.NodejsFunction(this, 'auditor', {
       runtime: lambda.Runtime.NODEJS_12_X,
       /* code loaded from dist directory */
@@ -235,6 +227,14 @@ export class MetroLensStack extends cdk.Stack {
 
     /* grant the lambda access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
+
+    /* create a new topic for lambda errors */
+    const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic')
+
+    /* subscribe by email to the lambda error topic */
+    lambdaErrorTopic.addSubscription(
+      new subscriptions.EmailSubscription(props?.email!)
+    )
 
     // create queue to send sms message to my phone
     // const queue = new sqs.Queue(this, 'MetroLensQueue', {
