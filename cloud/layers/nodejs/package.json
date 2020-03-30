@@ -9,6 +9,8 @@
   "license": "ISC",
   "dependencies": {
     "aws-appsync": "^3.0.2",
+    "aws-lambda": "^1.0.5",
+    "aws-sdk": "^2.643.0",
     "axios": "^0.19.2"
   }
 }

@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ES2015",
     "module": "commonjs",
-    "lib": ["es2018"],
-    "declaration": true,
+    "lib": ["ES2020"],
+    "declaration": false,
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -20,5 +20,5 @@
     "esModuleInterop": true,
     "typeRoots": ["./node_modules/@types"]
   },
-  "exclude": ["cloud/cdk.out"]
+  "exclude": ["cdk.out"]
 }

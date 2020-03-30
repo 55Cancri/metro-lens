@@ -6,7 +6,8 @@
     "deploy": "./deploy.sh"
   },
   "dependencies": {
-    "husky": "^4.2.3"
+    "husky": "^4.2.3",
+    "performance-now": "^2.1.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^8.3.5",

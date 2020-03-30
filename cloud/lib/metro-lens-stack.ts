@@ -5,7 +5,9 @@ import * as sqs from '@aws-cdk/aws-sqs'
 import * as cdk from '@aws-cdk/core'
 import * as s3 from '@aws-cdk/aws-s3'
 import * as s3Deployment from '@aws-cdk/aws-s3-deployment'
+import * as dynamodb from '@aws-cdk/aws-dynamodb'
 import * as lambda from '@aws-cdk/aws-lambda'
+import * as nodejs from '@aws-cdk/aws-lambda-nodejs'
 import * as appsync from '@aws-cdk/aws-appsync'
 import * as cloudfront from '@aws-cdk/aws-cloudfront'
 import * as events from '@aws-cdk/aws-events'
@@ -64,14 +66,34 @@ export class MetroLensStack extends cdk.Stack {
       distribution
     )
 
-    /* create dynamodb to interface with appsync (users and metrics) */
+    /* create dynamodb table */
+    const metrolensTable = new dynamodb.Table(this, 'metrolens-table', {
+      tableName: 'metro',
+      partitionKey: { name: 'entity', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
+    /* create dynamodb history table */
+    const metrolensHistTable = new dynamodb.Table(
+      this,
+      'metrolens-hist-table',
+      {
+        tableName: 'metro-hist',
+        partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+        sortKey: { name: 'archiveTime', type: dynamodb.AttributeType.STRING },
+        billingMode: dynamodb.BillingMode.PROVISIONED,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    )
 
     /* create appsync to interface with lambdas and dynamodb */
     const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
       name: 'metrolens-graphql-api',
       logConfig: {
         /* log every resolver */
-        fieldLogLevel: appsync.FieldLogLevel.ALL
+        fieldLogLevel: appsync.FieldLogLevel.ALL,
       },
 
       // authorizationConfig: {
@@ -86,16 +108,16 @@ export class MetroLensStack extends cdk.Stack {
       //     }
       //   ]
       // },
-      schemaDefinitionFile: props?.schemaDirectory
+      schemaDefinitionFile: props?.schemaDirectory,
     })
 
     /* appsync: create lambda */
     const appsyncLambda = new lambda.Function(this, 'appsyncTestLambda', {
-      // code: lambda.Code.fromInline(
-      //   'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
-      // ),
+      code: lambda.Code.fromInline(
+        'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
+      ),
       runtime: lambda.Runtime.NODEJS_12_X,
-      handler: 'index.handler'
+      handler: 'index.handler',
     })
 
     /* appsync: add lambda */
@@ -109,14 +131,14 @@ export class MetroLensStack extends cdk.Stack {
       typeName: 'Query',
       fieldName: 'getUsers',
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-      responseMappingTemplate: appsync.MappingTemplate.lambdaResult()
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
     lambdaDataSource.createResolver({
       typeName: 'Query',
       fieldName: 'getUser',
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-      responseMappingTemplate: appsync.MappingTemplate.lambdaResult()
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
     const layer = new lambda.LayerVersion(this, 'CommonLayer', {
@@ -130,44 +152,89 @@ export class MetroLensStack extends cdk.Stack {
        * */
       code: lambda.Code.fromAsset(path.join(__dirname, '../layers')),
       compatibleRuntimes: [lambda.Runtime.NODEJS_12_X],
-      description: 'Layer for Metro Lens lambdas.'
+      description: 'Layer for Metro Lens lambdas.',
     })
 
     /* create lambda to make api bus calls every minute */
-    const metroPollingLambda = new lambda.Function(
-      this,
-      'metroPollingHandler',
-      {
-        runtime: lambda.Runtime.NODEJS_12_X,
-        /* code loaded from dist directory */
-        code: lambda.Code.fromAsset('lambda/dist'),
-        /* file is metro-polling, function is handler */
-        handler: 'metro-polling.handler',
-        /* include reuseable node modles */
-        layers: [layer],
+    // const lambdaScribe = new lambda.Function(this, 'scribe', {
+    const lambdaScribe = new nodejs.NodejsFunction(this, 'scribe', {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      /* code loaded from dist directory */
+      entry: './lambda/scribe/scribe.ts',
+      // code: lambda.Code.fromAsset('lambda/dist'),
 
-        description:
-          'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
-        environment: {
-          WMATA_KEY: process.env.WMATA_KEY!,
-          CONNECTOR_KEY: process.env.CONNECTOR_KEY!
-        }
-        // TODO: add function name for aws console
-        // functionName
-      }
-    )
+      /* file is metro-polling, function is handler */
+      handler: 'handler',
+      sourceMaps: false,
+      minify: false,
+      // handler: 'metro-polling.handler',
+      /* include reuseable node modles */
+      layers: [layer],
+      description:
+        'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
+      environment: {
+        PRIMARY_KEY: 'entity',
+        SORT_KEY: 'id',
+        TABLE_NAME: metrolensTable.tableName,
+        CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
+        WMATA_KEY: process.env.WMATA_KEY!,
+      },
+      // TODO: add function name for aws console
+      // functionName
+    })
 
     /* create a cloudwatch target from the lambda */
-    const metroPollingTarget = new targets.LambdaFunction(metroPollingLambda)
+    const scribeTarget = new targets.LambdaFunction(lambdaScribe)
 
     /* create cloudwatch 1 minute interval trigger for lambda */
-    new events.Rule(this, 'metroPollingSchedule', {
+    new events.Rule(this, 'scribeSchedule', {
       description:
         'Call a lambda to poll wmata and fairfax connector apis to get the latest bus and rail predictions. The lambda will trigger an appsync mutation and save the latest data to dynamodb.',
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       /* attach the lambda to the schedule */
-      targets: [metroPollingTarget]
+      targets: [scribeTarget],
     })
+
+    // const lambdaAuditor = new lambda.Function(this, 'auditor', {
+    const lambdaAuditor = new nodejs.NodejsFunction(this, 'auditor', {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      /* code loaded from dist directory */
+      entry: './lambda/auditor/auditor.ts',
+      // code: lambda.Code.fromAsset('lambda/auditor'),
+      /* file is auditor.ts, function is handler */
+      handler: 'handler',
+      sourceMaps: false,
+      minify: false,
+      // handler: 'auditor.handler',
+      /* include reuseable node modles */
+      layers: [layer],
+      timeout: cdk.Duration.seconds(10),
+      description: 'Ensure all vehicle ids are present in the database.',
+      environment: {
+        SORT_KEY: 'id',
+        PRIMARY_KEY: 'entity',
+        TABLE_NAME: metrolensTable.tableName,
+        CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
+        WMATA_KEY: process.env.WMATA_KEY!,
+      },
+      // TODO: add function name for aws console
+      // functionName
+    })
+
+    /* create a cloudwatch target from the lambda */
+    const auditorTarget = new targets.LambdaFunction(lambdaAuditor)
+
+    /* create cloudwatch 1 minute interval trigger for lambda */
+    new events.Rule(this, 'auditorSchedule', {
+      description:
+        'Call the auditor lambda to make sure all vehicle ids are accounted for.',
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+      /* attach the lambda to the schedule */
+      targets: [auditorTarget],
+    })
+
+    /* grant the lambda access to the dynamodb table */
+    metrolensTable.grantReadWriteData(lambdaAuditor)
 
     // create queue to send sms message to my phone
     // const queue = new sqs.Queue(this, 'MetroLensQueue', {
@@ -188,8 +255,8 @@ export class MetroLensStack extends cdk.Stack {
         errorCode,
         responseCode: 200,
         responsePagePath: '/index.html',
-        errorCachingMinTtl: 300
-      })
+        errorCachingMinTtl: 300,
+      }),
     },
     cloudfront: {
       /* get the certificate from aws by its arn, then attach to cloudfront */
@@ -205,7 +272,7 @@ export class MetroLensStack extends cdk.Stack {
           /* define the method (SSL protocol) by which cloudfront encrypts traffic over HTTPS connections */
           securityPolicy: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2018,
           // default, CloudFront can use SNI to host multiple distributions on the same IP - which a large majority of clients will support.
-          sslMethod: cloudfront.SSLMethod.SNI
+          sslMethod: cloudfront.SSLMethod.SNI,
         }),
       /* An Origin Access Identity is a virtual CloudFront user that is used to gain access to private content from your S3 bucket. Without this, cloudfront is like an anonymous user. Note that even though an OAI user is an IAM subject that can be referenced in a resource policy, it does not create a full-fledged IAM user, so you don't see it in IAM and cannot attach policies to it directly. Also note that currently, OAI only works for S3 bucket origins. */
       getOriginIdentityAccessUser: () => {
@@ -215,8 +282,8 @@ export class MetroLensStack extends cdk.Stack {
           'OAI',
           {
             cloudFrontOriginAccessIdentityConfig: {
-              comment: `Necessary for CloudFront to gain access to the bucket.`
-            }
+              comment: `Necessary for CloudFront to gain access to the bucket.`,
+            },
           }
         )
 
@@ -226,8 +293,8 @@ export class MetroLensStack extends cdk.Stack {
           'OAIImported',
           cloudFrontOaiRef.ref
         )
-      }
-    }
+      },
+    },
   }
 
   private createBucket = (bucketName: string) =>
@@ -243,7 +310,7 @@ export class MetroLensStack extends cdk.Stack {
       /* only cloudfront can read the bucket */
       publicReadAccess: false,
       /* upload a new file on each upload */
-      versioned: true
+      versioned: true,
     })
 
   private deploySourceToBucket = (
@@ -257,7 +324,7 @@ export class MetroLensStack extends cdk.Stack {
       /* the file paths to invalidate in the CloudFront distribution */
       distributionPaths: ['/*'],
       /* the CloudFront distribution that has sole access to the bucket */
-      distribution
+      distribution,
     })
 
   /* The cloudfront fronts the S3 bucket. It also needs to invalidate the Cloudfront cache when new files are uploaded to the S3 bucket. */
@@ -300,10 +367,10 @@ export class MetroLensStack extends cdk.Stack {
             /* specify the bucket that the cloudfront will read from  */
             s3BucketSource: bucket,
             /* attach the OAI user to the cloudfront so that it can access the s3 bucket contents */
-            originAccessIdentity: oaiUser
+            originAccessIdentity: oaiUser,
           },
-          behaviors: [{ isDefaultBehavior: true }]
-        }
+          behaviors: [{ isDefaultBehavior: true }],
+        },
       ],
       /* attach to the certificate to the cloudfront */
       viewerCertificate,
@@ -312,7 +379,7 @@ export class MetroLensStack extends cdk.Stack {
       /* redirect all errors back to the react page */
       errorConfigurations: [errorConfig403, errorConfig404],
       /* The default object to serve. Not sure what would happen without this. */
-      defaultRootObject: 'index.html'
+      defaultRootObject: 'index.html',
     })
   }
 
@@ -324,7 +391,7 @@ export class MetroLensStack extends cdk.Stack {
     // TODO: add environment prefix to route 53 domain names. Already happening for s3 bucket and cloudfront.
     /* find the hosted zone that was manually created after purchasing a domain name from the wizard */
     const zone = route53.HostedZone.fromLookup(this, hostedZoneId, {
-      domainName: hostedZoneName
+      domainName: hostedZoneName,
     })
 
     /* get a reference to the cloudfront domain */
@@ -332,10 +399,26 @@ export class MetroLensStack extends cdk.Stack {
       new alias.CloudFrontTarget(distribution)
     )
 
-    /* route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
+    // TODO: get working in the future
+    // /* route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
+    // return new route53.ARecord(this, 'BaseAliasRecord', {
+    //   recordName: 'metro-lens.com.',
+    //   zone,
+    //   target,
+    // })
+
+    // TODO: get working in the future
+    // /* route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
+    // return new route53.ARecord(this, 'CommonAliasRecord', {
+    //   recordName: 'www.metro-lens.com.',
+    //   zone,
+    //   target,
+    // })
+
+    /* ORIGINAL - route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
     return new route53.ARecord(this, 'AliasRecord', {
       zone,
-      target
+      target,
     })
   }
 }

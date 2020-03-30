@@ -1,4 +1,5 @@
 .env
+.cache
 *.js
 coverage
 node_modules

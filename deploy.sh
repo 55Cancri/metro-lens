@@ -11,19 +11,19 @@ cd $scriptDir
 yarn --cwd cloud run build || exit 1
 
 # log success
-echo -e 'Finished compiling \033[31;1mCDK\033[0m files. No TypeScript errors found.\n'
+echo -e 'Finished compiling \033[32;1mCDK\033[0m files. No TypeScript errors found.\n'
 
 # compile the lambda(s)
 yarn --cwd cloud/lambda run build || exit 1
 
 # log success
-echo -e 'Finished compiling \033[31;1mlambda\033[0m files. No TypeScript errors found.\n'
+echo -e 'Finished compiling \033[32;1mlambda\033[0m files. No TypeScript errors found.\n'
 
 # compile the ui
 yarn --cwd client run build || exit 1
 
 # log success
-echo 'Finished compiling \033[31;1mUI\033[0m files. No TypeScript errors found.\n'
+echo 'Finished compiling \033[32;1mUI\033[0m files. No TypeScript errors found.\n'
 
 # test the stack
 yarn --cwd cloud run test || exit 1
