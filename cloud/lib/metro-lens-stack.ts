@@ -1,14 +1,16 @@
 import path from 'path'
-import * as sns from '@aws-cdk/aws-sns'
-import * as subscriptions from '@aws-cdk/aws-sns-subscriptions'
-import * as sqs from '@aws-cdk/aws-sqs'
 import * as cdk from '@aws-cdk/core'
 import * as s3 from '@aws-cdk/aws-s3'
+import * as sqs from '@aws-cdk/aws-sqs'
+import * as sns from '@aws-cdk/aws-sns'
+import * as subscriptions from '@aws-cdk/aws-sns-subscriptions'
 import * as s3Deployment from '@aws-cdk/aws-s3-deployment'
 import * as dynamodb from '@aws-cdk/aws-dynamodb'
 import * as lambda from '@aws-cdk/aws-lambda'
 import * as nodejs from '@aws-cdk/aws-lambda-nodejs'
 import * as appsync from '@aws-cdk/aws-appsync'
+import * as cloudwatch from '@aws-cdk/aws-cloudwatch'
+import * as cloudwatchActions from '@aws-cdk/aws-cloudwatch-actions'
 import * as cloudfront from '@aws-cdk/aws-cloudfront'
 import * as events from '@aws-cdk/aws-events'
 import * as targets from '@aws-cdk/aws-events-targets'
@@ -17,12 +19,15 @@ import * as alias from '@aws-cdk/aws-route53-targets'
 import * as acm from '@aws-cdk/aws-certificatemanager'
 import * as dotenv from 'dotenv'
 
-import { props } from '../bin/metro-lens'
+import { getEnvironmentVariables } from '../bin/metro-lens'
 
 /* setup dotenv to read environment variables */
 dotenv.config()
 
-type StackProps = cdk.StackProps & typeof props {}
+/* define the props based on the environment variables */
+const props = getEnvironmentVariables()
+
+type StackProps = cdk.StackProps & typeof props
 
 export class MetroLensStack extends cdk.Stack {
   /**
@@ -54,9 +59,9 @@ export class MetroLensStack extends cdk.Stack {
 
     /* update the route 53 */
     const hostedZone = this.updateRoute53(
+      distribution,
       props?.hostedZoneName!,
-      props?.hostedZoneId!,
-      distribution
+      props?.hostedZoneId!
     )
 
     /* create dynamodb table */
@@ -151,15 +156,13 @@ export class MetroLensStack extends cdk.Stack {
     /* create lambda to make api bus calls every minute */
     // const lambdaScribe = new lambda.Function(this, 'scribe', {
     const lambdaScribe = new nodejs.NodejsFunction(this, 'scribe', {
+      functionName: 'scribe',
       runtime: lambda.Runtime.NODEJS_12_X,
       /* code loaded from dist directory */
       entry: './lambda/scribe/scribe.ts',
       // code: lambda.Code.fromAsset('lambda/dist'),
-
       /* file is metro-polling, function is handler */
       handler: 'handler',
-      sourceMaps: false,
-      minify: false,
       // handler: 'metro-polling.handler',
       /* include reuseable node modles */
       layers: [layer],
@@ -172,8 +175,6 @@ export class MetroLensStack extends cdk.Stack {
         CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
         WMATA_KEY: process.env.WMATA_KEY!,
       },
-      // TODO: add function name for aws console
-      // functionName
     })
 
     /* create a cloudwatch target from the lambda */
@@ -189,15 +190,13 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     const lambdaAuditor = new nodejs.NodejsFunction(this, 'auditor', {
+      functionName: 'auditor',
       runtime: lambda.Runtime.NODEJS_12_X,
       /* code loaded from dist directory */
       entry: './lambda/auditor/auditor.ts',
       // code: lambda.Code.fromAsset('lambda/auditor'),
       /* file is auditor.ts, function is handler */
       handler: 'handler',
-      sourceMaps: false,
-      minify: false,
-      // handler: 'auditor.handler',
       /* include reuseable node modles */
       layers: [layer],
       timeout: cdk.Duration.seconds(10),
@@ -209,8 +208,6 @@ export class MetroLensStack extends cdk.Stack {
         CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
         WMATA_KEY: process.env.WMATA_KEY!,
       },
-      // TODO: add function name for aws console
-      // functionName
     })
 
     /* create a cloudwatch target from the lambda */
@@ -229,11 +226,75 @@ export class MetroLensStack extends cdk.Stack {
     metrolensTable.grantReadWriteData(lambdaAuditor)
 
     /* create a new topic for lambda errors */
-    const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic')
+    const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic', {
+      topicName: 'lambda-error-topic',
+    })
 
-    /* subscribe by email to the lambda error topic */
+    /**
+     * The most important properties to set while creating an Alarms are:
+     *
+     * threshold: the value to compare the metric against.
+     *
+     * comparisonOperator: the comparison operation to use, defaults to metric >= threshold.
+     *
+     * evaluationPeriods: how many consecutive periods the metric has to be breaching the the
+     * threshold for the alarm to trigger.
+     */
+    const auditorLambdaErrorAlarm = new cloudwatch.Alarm(
+      this,
+      'AuditorLambdaErrorAlarm',
+      {
+        alarmName: 'auditor-lambda-error-alarm',
+        alarmDescription: 'Alarm for errors from the auditor lambda.',
+        /* create the alarm using the lambda */
+        metric: lambdaAuditor.metricErrors({
+          period: cdk.Duration.minutes(1),
+        }),
+        threshold: 1,
+        /* trigger the alarm after crossing the threshold once (1 error is recorded) */
+        evaluationPeriods: 1,
+      }
+    )
+
+    /**
+     * The most important properties to set while creating an Alarms are:
+     *
+     * threshold: the value to compare the metric against.
+     *
+     * comparisonOperator: the comparison operation to use, defaults to metric >= threshold.
+     *
+     * evaluationPeriods: how many consecutive periods the metric has to be breaching the the
+     * threshold for the alarm to trigger.
+     */
+    const scribeLambdaErrorAlarm = new cloudwatch.Alarm(
+      this,
+      'ScribeLambdaErrorAlarm',
+      {
+        alarmName: 'scribe-lambda-error-alarm',
+        alarmDescription: 'Alarm for errors from the scribe lambda.',
+        /* create the alarm using the lambda */
+        metric: lambdaScribe.metricErrors({
+          period: cdk.Duration.minutes(1),
+        }),
+        threshold: 1,
+        /* trigger the alarm after crossing the threshold once (1 error is recorded) */
+        evaluationPeriods: 1,
+      }
+    )
+
+    /* [pull] subscribe by email to the lambda error topic */
     lambdaErrorTopic.addSubscription(
       new subscriptions.EmailSubscription(props?.email!)
+    )
+
+    /* [push] send an sns message to the topic when the auditor lambda alarm goes off */
+    auditorLambdaErrorAlarm.addAlarmAction(
+      new cloudwatchActions.SnsAction(lambdaErrorTopic)
+    )
+
+    /* [push] send an sns message to the topic when the scribe lambda alarm goes off */
+    scribeLambdaErrorAlarm.addAlarmAction(
+      new cloudwatchActions.SnsAction(lambdaErrorTopic)
     )
 
     // create queue to send sms message to my phone
@@ -310,7 +371,7 @@ export class MetroLensStack extends cdk.Stack {
       /* only cloudfront can read the bucket */
       publicReadAccess: false,
       /* upload a new file on each upload */
-      versioned: true,
+      versioned: false,
     })
 
   private deploySourceToBucket = (
@@ -321,10 +382,12 @@ export class MetroLensStack extends cdk.Stack {
     new s3Deployment.BucketDeployment(this, `BucketDeployment`, {
       sources: [uiSource],
       destinationBucket: bucket,
+
       /* the file paths to invalidate in the CloudFront distribution */
       distributionPaths: ['/*'],
       /* the CloudFront distribution that has sole access to the bucket */
       distribution,
+      retainOnDelete: false,
     })
 
   /* The cloudfront fronts the S3 bucket. It also needs to invalidate the Cloudfront cache when new files are uploaded to the S3 bucket. */
@@ -384,20 +447,20 @@ export class MetroLensStack extends cdk.Stack {
   }
 
   private updateRoute53 = (
+    distribution: cloudfront.CloudFrontWebDistribution,
     hostedZoneName: string,
-    hostedZoneId: string,
-    distribution: cloudfront.CloudFrontWebDistribution
+    hostedZoneId: string
   ) => {
     // TODO: add environment prefix to route 53 domain names. Already happening for s3 bucket and cloudfront.
-    /* find the hosted zone that was manually created after purchasing a domain name from the wizard */
-    const zone = route53.HostedZone.fromLookup(this, hostedZoneId, {
-      domainName: hostedZoneName,
-    })
+    /* // *Original - find the hosted zone that was manually created after purchasing a domain name from the wizard */
+    // const zone = route53.HostedZone.fromLookup(this, hostedZoneId, {
+    //   domainName: hostedZoneName,
+    // })
 
-    /* get a reference to the cloudfront domain */
-    const target = route53.RecordTarget.fromAlias(
-      new alias.CloudFrontTarget(distribution)
-    )
+    /* // *Original - get a reference to the cloudfront domain */
+    // const target = route53.RecordTarget.fromAlias(
+    //   new alias.CloudFrontTarget(distribution)
+    // )
 
     // TODO: get working in the future
     // /* route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
@@ -415,10 +478,32 @@ export class MetroLensStack extends cdk.Stack {
     //   target,
     // })
 
-    /* ORIGINAL - route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
-    return new route53.ARecord(this, 'AliasRecord', {
-      zone,
-      target,
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+      this,
+      'zone',
+      { hostedZoneId, zoneName: hostedZoneName }
+    )
+
+    new route53.ARecord(this, 'baseARecord', {
+      zone: hostedZone,
+      recordName: 'metro-lens.com.',
+      target: route53.RecordTarget.fromAlias(
+        new alias.CloudFrontTarget(distribution)
+      ),
     })
+
+    new route53.ARecord(this, 'wwwARecord', {
+      zone: hostedZone,
+      recordName: 'www.metro-lens.com.',
+      target: route53.RecordTarget.fromAlias(
+        new alias.CloudFrontTarget(distribution)
+      ),
+    })
+
+    /* // *Original - route requests from the custom domain in route 53 (metro-lens.com) to cloudfront */
+    // return new route53.ARecord(this, 'AliasRecord', {
+    //   zone,
+    //   target,
+    // })
   }
 }

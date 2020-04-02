@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import chalk from 'chalk'
 import * as path from 'path'
 import * as dotenv from 'dotenv'
 import * as cdk from '@aws-cdk/core'
-import * as chalk from 'chalk'
+import * as time from 'date-fns'
 import { MetroLensStack } from '../lib/metro-lens-stack'
 
 const STAGE = 'stage'
@@ -23,25 +24,27 @@ const configEnvironment = (environment: Environments) => {
   }
 }
 
-/* single source of truth for the app name */
-export const appName = 'metro-lens'
+export const getEnvironmentVariables = () => {
+  /* single source of truth for the app name */
+  const appName = 'metro-lens'
 
-/* single source of truth for types and test prop values */
-export const props = {
-  appName,
-  email: process.env.EMAIL!,
-  uiDirectory: UI_DIRECTORY,
-  schemaDirectory: SCHEMA_DIRECTORY,
-  environmentName: process.env.ENV_NAME!,
-  resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
-  certificateArn: process.env.ACM_CERTIFICATE_ARN!,
-  hostedZoneId: process.env.HOSTED_ZONE_ID!,
-  hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-  aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
-  },
+  /* single source of truth for types and test prop values */
+  return {
+    appName,
+    email: process.env.EMAIL!,
+    uiDirectory: UI_DIRECTORY,
+    schemaDirectory: SCHEMA_DIRECTORY,
+    environmentName: process.env.ENV_NAME!,
+    resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
+    certificateArn: process.env.ACM_CERTIFICATE_ARN!,
+    hostedZoneId: process.env.HOSTED_ZONE_ID!,
+    hostedZoneName: process.env.HOSTED_ZONE_NAME!,
+    aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
+    env: {
+      account: process.env.CDK_DEFAULT_ACCOUNT!,
+      region: process.env.CDK_DEFAULT_REGION!,
+    },
+  }
 }
 
 const synth = async (): Promise<number> => {
@@ -62,6 +65,10 @@ const synth = async (): Promise<number> => {
     return process.exit(1)
   }
 
+  const props = getEnvironmentVariables()
+
+  console.log({ typeof: typeof MetroLensStack })
+
   /* initialize the stack */
   new MetroLensStack(app, 'MetroLensStack', props)
 
@@ -73,8 +80,18 @@ const synth = async (): Promise<number> => {
 }
 
 /* handle failure to create cloudformation */
-synth().catch((error: Error) => {
-  console.error(
-    chalk.bold.black.bgRed.inverse('Error during `cdk synth`:', error)
-  )
-})
+synth()
+  .then(() => {
+    const now = time.format(new Date(), 'hh:mmaaaaa')
+    const timestamp = chalk.bold.green(`[${now}m]:`)
+    console.log(`${timestamp} Finished deployment.`)
+  })
+  .catch((error: Error) => {
+    console.error(
+      chalk.bold.black.bgRed.inverse('Error during cdk synth:', error),
+      chalk.bold.black.bgRed.inverse(
+        '. If this error persists after cdk synth, try yarn build. The js files might be outdated.'
+      )
+    )
+    return console.error(error)
+  })

@@ -6,6 +6,7 @@
     "deploy": "./deploy.sh"
   },
   "dependencies": {
+    "date-fns": "^2.11.1",
     "husky": "^4.2.3",
     "performance-now": "^2.1.0"
   },

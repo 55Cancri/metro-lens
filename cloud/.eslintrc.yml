@@ -1,7 +1,7 @@
 # root: true
 
 # parser: babel-eslint
-# parser: '@typescript-eslint/parser'
+parser: '@typescript-eslint/parser'
 
 parserOptions:
   # sourceType: module
@@ -9,14 +9,15 @@ parserOptions:
   ecmaFeatures:
     jsx: true
 
-settings:
-  import/parsers:
-    '@typescript-eslint/parser': [.ts, .tsx]
-  import/resolver:
-    typescript: {}
+# settings:
+#   import/parsers:
+#     '@typescript-eslint/parser': [.ts, .tsx]
+#   import/resolver:
+#     typescript: {}
 
 extends:
   # not all ESLint core rules are compatible with TypeScript, so you need to add both eslint:recommended and plugin:@typescript-eslint/eslint-recommended (which will adjust the one from ESLint appropriately for TypeScript) to your config
+  - plugin:@typescript-eslint
   - plugin:@typescript-eslint/eslint-recommended
   - plugin:@typescript-eslint/recommended
   - plugin:react/recommended
@@ -25,7 +26,7 @@ extends:
   - prettier
 
 plugins:
-  - '@typescript-eslint/eslint-plugin'
+  - '@typescript-eslint'
   - import
   - jest
   - prettier

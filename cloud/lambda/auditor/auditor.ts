@@ -1,7 +1,7 @@
 import * as aws from 'aws-sdk'
 import * as lambda from 'aws-lambda'
 import now from 'performance-now'
-import time from 'date-fns'
+import * as time from 'date-fns'
 import axios from 'axios'
 import util from 'util'
 
@@ -374,7 +374,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
     const { routes } = inVehicleMap
 
-    /* if the vehicleId dynamodb record has not encountered this route before, */
+    /* if the dynamodb vehicleId record has not encountered this route before, */
     if (!routes.includes(vehicle.rt)) {
       /* then add the new route to the item */
       const updatedRoutes = [...routes, vehicle.rt]
