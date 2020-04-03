@@ -34,8 +34,8 @@
   },
   "scripts": {
     "watch": "tsc -w",
-    "inspection": "yarn build && yarn test",
     "build": "tsc",
+    "inspection": "yarn build && yarn test",
     "snapshot": "jest -u --coverage",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",

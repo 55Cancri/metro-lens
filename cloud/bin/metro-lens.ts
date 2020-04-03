@@ -5,13 +5,12 @@ import * as dotenv from 'dotenv'
 import * as cdk from '@aws-cdk/core'
 import * as time from 'date-fns'
 import { MetroLensStack } from '../lib/metro-lens-stack'
+import { getEnvironmentVariables } from './get-env-vars'
 
 const STAGE = 'stage'
 const ENVIRONMENTS = ['atlantic', 'pacific'] as const
 
 /* should be relative to where it will be used, e.g. lib/metro-lens-stack.ts */
-const UI_DIRECTORY = '../client/build'
-const SCHEMA_DIRECTORY = 'graphql/schema.graphql'
 
 type Environments = typeof ENVIRONMENTS[number]
 
@@ -21,29 +20,6 @@ const configEnvironment = (environment: Environments) => {
     dotenv.config({
       path: `${parentDirectory}/staging/.env.${environment}`,
     })
-  }
-}
-
-export const getEnvironmentVariables = () => {
-  /* single source of truth for the app name */
-  const appName = 'metro-lens'
-
-  /* single source of truth for types and test prop values */
-  return {
-    appName,
-    email: process.env.EMAIL!,
-    uiDirectory: UI_DIRECTORY,
-    schemaDirectory: SCHEMA_DIRECTORY,
-    environmentName: process.env.ENV_NAME!,
-    resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
-    certificateArn: process.env.ACM_CERTIFICATE_ARN!,
-    hostedZoneId: process.env.HOSTED_ZONE_ID!,
-    hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-    aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
-    env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT!,
-      region: process.env.CDK_DEFAULT_REGION!,
-    },
   }
 }
 
@@ -67,7 +43,7 @@ const synth = async (): Promise<number> => {
 
   const props = getEnvironmentVariables()
 
-  console.log({ typeof: typeof MetroLensStack })
+  console.log({ typeof: typeof MetroLensStack, filename: __filename })
 
   /* initialize the stack */
   new MetroLensStack(app, 'MetroLensStack', props)

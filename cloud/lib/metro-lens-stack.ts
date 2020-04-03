@@ -19,7 +19,7 @@ import * as alias from '@aws-cdk/aws-route53-targets'
 import * as acm from '@aws-cdk/aws-certificatemanager'
 import * as dotenv from 'dotenv'
 
-import { getEnvironmentVariables } from '../bin/metro-lens'
+import { getEnvironmentVariables } from '../bin/get-env-vars'
 
 /* setup dotenv to read environment variables */
 dotenv.config()

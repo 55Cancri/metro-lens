@@ -83,6 +83,7 @@ const TABLE_NAME = process.env.TABLE_NAME || ''
 const PRIMARY_KEY = process.env.PRIMARY_KEY || ''
 const SORT_KEY = process.env.SORT_KEY || ''
 const KEY = process.env.CONNECTOR_KEY || ''
+const MAX_DYNAMO_REQUESTS = 25
 
 /* define error constants */
 const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
@@ -98,6 +99,9 @@ const trace = (item: unknown) =>
  */
 const lambdaLog = (item: unknown) => console.log(JSON.stringify(item, null, 2))
 
+/**
+ * Get the current time in ISO format.
+ */
 const getNowISO = () => new Date().toISOString()
 
 /**
@@ -112,10 +116,42 @@ const shouldCheckRoute = (routeObject: RouteObject) => {
     new Date(Number(routeObject.lastChecked))
   )
 
-  return !routeObject.active && hoursSinceLastCheck > 12
+  return !routeObject.active || hoursSinceLastCheck > 12
 }
 
-/* lambda */
+/**
+ * Upload the items to dynamodb in bulk.
+ */
+const batchPutItems = async (requests: unknown[]) => {
+  /* define the params of the dynamoDB call */
+  const params = {
+    RequestItems: { [TABLE_NAME]: requests },
+  } as aws.DynamoDB.DocumentClient.BatchWriteItemInput
+
+  /* call the batch write to save the items to the table */
+  return client.batchWrite(params).promise()
+}
+
+/**
+ * Chunk an array into smaller arrays.
+ */
+const chunk = (arr: unknown[], size: number) =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  )
+
+/**
+ * The goal of this lambda is simple — to update the status of every route
+ * and the status of every vehicle of the *active* routes.
+ *
+ * Updating the status of the routes and the vehicles mostly involves
+ * setting the active property to true or false.
+ *
+ * For the route updates, it will update the lastChecked property
+ * every 12 hours, even though the lambda will run every hour.
+ *
+ * @param event
+ */
 export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   const stopwatch = new StopWatch()
 
@@ -143,18 +179,44 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   // let vehicleCount = 0
 
   /* get the stored status of the routes */
-  const { Items: storedRouteStatus } = await client
+  const { Items: routeStatusDb } = await client
     .query(routeStatusParams)
     .promise()
 
+  /* get the current vehicle ids */
+  const { Items: vehicleStatusDb } = await client
+    .query(metadataParams)
+    .promise()
+
   /* map the array into a map for comparison with the api response */
-  const routeStatusMap = storedRouteStatus?.reduce(
+  const routeStatusMap = routeStatusDb?.reduce(
     (store, { route, active, lastChecked }) => ({
       ...store,
       [route]: { active, lastChecked },
     }),
     {}
   ) as RouteMap
+
+  /* store the saved dynamodb vehicles in a map */
+  const vehicleMapDb = vehicleStatusDb?.reduce((store, { id, ...rest }) => {
+    /* get the vehicleId - metadata_401 -> ['status', '401'] */
+    const [, vehicleId] = id.split('-')
+
+    /* assign the vehicle data object to the vehicle id key */
+    return { ...store, [vehicleId]: rest }
+  }, {}) as { [key: string]: Vehicle }
+
+  console.log('Db Routes')
+  lambdaLog(routeStatusDb?.slice(0, 3))
+
+  console.log('Db Vehicles')
+  lambdaLog(vehicleStatusDb?.slice(0, 3))
+
+  console.log('Routes map')
+  lambdaLog(routeStatusMap)
+
+  console.log('Vehicles map')
+  lambdaLog(vehicleMapDb)
 
   /* make the getroutes api call */
   const {
@@ -167,17 +229,18 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   /* extract the array of routes from the api response */
   const { routes } = data['bustime-response']
 
-  /* // TODO: start counting the number of api requests */
-  const callCount = 1
+  const initialApiCount = 1
 
   /**
    * PT 1: update the route information.
+   * The route call is made, then for each route in the
+   * array, the getVehicles function is called.
    *
    * For each route, get the associated vehicles.
    * @param {Route} route - information about the route
    * @returns {Route[]}
    */
-  const getVehicles = async ({ rt, rtnm }: Route) => {
+  const getVehiclesAndUpdateRoute = async ({ rt, rtnm }: Route) => {
     /* check if the route status already exists in dynamodb */
     const routeInMap: RouteObject = routeStatusMap[rt]
 
@@ -201,7 +264,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
       const lastChecked = now
 
       /* define the date created for this record if it doesn't exist already */
-      const dateCreated = !routeInMap ? { dateCreated: now } : {}
+      const routeDateCreated = !routeInMap ? { dateCreated: now } : {}
 
       /* if the call returned vehicle data as a successful response, */
       if ('vehicle' in routeData) {
@@ -218,7 +281,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
               route: rt,
               active: true,
               lastChecked,
-              ...dateCreated,
+              ...routeDateCreated,
             },
           })
           .promise()
@@ -226,17 +289,24 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         /* then map through the vehicle array and create param objects */
         const vehicles = vehicle.map(({ vid }) => {
           /* define the dynamodb sort key */
-          const id = `metadata_${vid}`
+          const id = `status_${vid}`
+
+          const vehicleInMap = vehicleMapDb[vid]
+
+          /* define the date created for this record if it doesn't exist already */
+          const vehicleDateCreated = !vehicleInMap ? { dateCreated: now } : {}
 
           /* this object will create or update the vehicle record in dynamodb */
           return {
+            ...vehicleInMap,
             [PRIMARY_KEY]: 'bus',
             [SORT_KEY]: id,
             lastCheck: lastChecked,
-            dateCreated: now,
             active: true,
             vid,
             rt,
+            // dateCreated: now,
+            ...vehicleDateCreated,
           }
         })
 
@@ -244,7 +314,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         await saveRouteStatus
 
         /* return the params object to the map */
-        return vehicles
+        return { vehicles, count: 1 }
       }
 
       /* otherwise if an error returned, */
@@ -259,7 +329,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
               route: rt,
               active: false,
               lastChecked,
-              ...dateCreated,
+              ...routeDateCreated,
             },
           })
           .promise()
@@ -280,11 +350,14 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         await saveRouteStatus
 
         /* // TODO: not sure why this is needed anymore */
-        return [{ rt, active: false, lastCheck: lastChecked }]
+        /* is needed to set bus active status to false */
+        /* no longer needed again, the active route status was already set to false above */
+        // return [{ rt, active: false, lastCheck: lastChecked }]
+        return { vehicles: [] }
       }
     }
 
-    return []
+    return { vehicles: [] }
   }
 
   // /* get the current vehicle ids */
@@ -293,11 +366,13 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   // /* get the vehicle ids for every route */
   // const allVehicles = await Promise.all(routes.map(getVehicles))
 
-  /* get the current vehicle ids */
-  const query = client.query(metadataParams).promise()
-
   /* get the vehicle ids for every route and flatten the nested arrays */
-  const api = Promise.all(routes.flatMap(getVehicles)) as Promise<Vehicle[][]>
+  const apiVehicles = (await Promise.all(
+    routes.flatMap(getVehiclesAndUpdateRoute)
+  )) as {
+    vehicles: Vehicle[]
+    count?: number
+  }[]
 
   /**
    * PT 2: update the vehicle ids in dynamodb.
@@ -305,28 +380,29 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
    * Wait for the api calls to dynamodb and the bus api to finish in parallel.
    * The `Promise.all` creates a 2d array of the api call.
    */
-  const [storedVehicles, apiVehicles] = await Promise.all([query, api])
-
-  /* extract the stored vehicle ids from the dynamodb call */
-  const { Items } = storedVehicles
 
   /* flatten the 2d array returned from the the api call */
-  const flatVehicles = apiVehicles.flat()
+  const flatVehicles = apiVehicles.reduce(
+    (store, item) => [...store, ...item.vehicles],
+    [] as Vehicle[]
+  )
 
-  /* store the saved dynamodb vehicles in a map */
-  const vehicleMapDb = Items?.reduce((store, { id, ...rest }) => {
-    /* get the vehicleId - metadata_401 -> ['metadata', '401'] */
-    const [, vehicleId] = id.split('-')
+  const finalApiCount = apiVehicles.reduce(
+    (total, item) => total + (item?.count! ?? 0),
+    initialApiCount
+  )
 
-    /* assign the vehicle data object to the vehicle id key */
-    return { ...store, [vehicleId]: rest }
-  }, {}) as { [key: string]: Vehicle }
+  console.log('Final api count', finalApiCount)
 
   /* log data */
+
+  // console.log('Api Vehicles')
+  // lambdaLog(apiVehicles)
+
   // console.log('Flat Vehicles')
   // lambdaLog(flatVehicles.slice(0, 3))
 
-  // console.log('Stored Vehicle Map')
+  // console.log('Vehicle Map Db')
   // lambdaLog(vehicleMapDb)
 
   /**
@@ -398,23 +474,39 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     return [...store, { ...inVehicleMap, ...partitionKey, lastChecked }]
   }, [] as Vehicle[])
 
+  const payload = updatedVehicleItems.map((Item) => ({ PutRequest: { Item } }))
+
   /* batch write the vehicleIdItems to dynamodb */
-  console.log('Updated vehicle status')
-  lambdaLog(updatedVehicleItems)
+  // console.log('Updated vehicle status')
+  // lambdaLog(updatedVehicleItems)
+
+  // /* chunk the the payloads, */
+  const requests = chunk(payload, MAX_DYNAMO_REQUESTS)
+
+  try {
+    /**
+     * Then batch save all the items to dynamoDB,
+     * one chunk at a time.
+     */
+    await Promise.all(requests.map(batchPutItems))
+  } catch (error) {
+    /* log error if failure */
+    console.error(error)
+  }
 
   stopwatch.stop()
 
   stopwatch.logElapsedSeconds()
 
-  /* define item */
-  const item = { [PRIMARY_KEY]: 'testing', id: getNowISO() }
+  // /* define item */
+  // const item = { [PRIMARY_KEY]: 'testing', id: getNowISO() }
 
-  /* define params */
-  const putParams = { TableName: TABLE_NAME, Item: item }
+  // /* define params */
+  // const putParams = { TableName: TABLE_NAME, Item: item }
 
   try {
     /* add item to dynamodb table */
-    await client.put(putParams).promise()
+    // await client.put(putParams).promise()
 
     /* return success response */
     return { statusCode: 201, body: '' }

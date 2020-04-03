@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv'
 import { MetroLensStack } from '../lib/metro-lens-stack'
 
 /* should be loaded after dotenv has read the environment variables */
-import { getEnvironmentVariables } from '../bin/metro-lens'
+import { getEnvironmentVariables } from '../bin/get-env-vars'
 
 /* define the path to the environment file */
 const toConfig = path.resolve(__dirname, '../staging') + '/.env.atlantic'
