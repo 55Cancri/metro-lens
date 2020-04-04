@@ -1,3 +1,7 @@
+# Run this file by calling the yarn invoke script in any child directory.
+# e.g. yarn invoke scribe50AAC574
+
+
 # define colors
 green='\033[0;32m'  
 red='\033[0;31m'
@@ -20,18 +24,31 @@ if test -z "$lambda"
     exit 0
 fi
 
+# load zsh presets and aliases (e.g. cdk alias) without logging anything
+source ~/.zshrc > /dev/null 2>&1
+
+
+# get the location of this script
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# cd to the script directory and run commands from there
+cd $scriptDir
+
+# go into the cloud folder to synth the cdk
+cd cloud
+
 # save the generated cloudformation template to a file
 cdk synth --no-staging > template.yaml
 
-echo "\n${green}${bold}${checkmark} Generated template.yaml.${reset}\n\n"
+echo "\n${green}${bold}${checkmark} Generated template.yaml.${reset}\n"
 
 # start the default docker if it is not already running
 docker-machine start
 
-echo "\n${green}${bold}${checkmark} Docker is running.${reset}\n\n"
+echo "\n${green}${bold}${checkmark} Docker is running.${reset}\n"
 
 
 # invoke the lambda using the logical id of the lambda in the template.yaml
 sam local invoke $lambda --no-event
 
-echo "\n${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}\n\n"
+echo "\n${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}\n"

@@ -1,4 +1,4 @@
-# load zsh presents without logging anything
+# load zsh presets and aliases without logging anything
 source ~/.zshrc > /dev/null 2>&1
 
 # get the location of this script

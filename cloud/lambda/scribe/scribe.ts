@@ -1,9 +1,18 @@
 import * as aws from 'aws-sdk'
 import * as lambda from 'aws-lambda'
 import axios from 'axios'
-import rx from 'rxjs'
-import op from 'rxjs/operators'
+import * as rx from 'rxjs'
+import * as op from 'rxjs/operators'
 import logger from 'winston'
+// @ts-ignore
+import { format as f } from 'logform/dist/browser'
+// import { format } from 'logform/dist/browser'
+
+import { test } from '../utils/test'
+
+const format = f as typeof logger.format
+
+test()
 
 type Options = {
   url: string
@@ -36,8 +45,20 @@ const urls = {
   wPredictions: '',
 }
 
+const myFormat = format.printf(({ level, message, label, timestamp }) => {
+  return `${timestamp} [${label}] ${level}: ${message}`
+})
+
+// logger.format.
 const winston = logger.createLogger({
-  level: 'info',
+  format: format.combine(
+    format.label({
+      label: 'Sup',
+    }),
+    format.timestamp(),
+    myFormat
+  ),
+  transports: [new logger.transports.Console()],
 })
 
 /* setup dynamodb client */
