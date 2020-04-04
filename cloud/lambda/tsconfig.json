@@ -1,5 +1,9 @@
 {
+  "extends": "../tsconfig.json",
+  "exclude": ["*.ts"],
   "compilerOptions": {
+    /* aws cdk parcel will bundle and ts-jest will run tests correctly */
+    "noEmit": true,
     "target": "ES2015",
     "lib": ["ES2020", "ESNext"],
     "module": "CommonJS",
@@ -18,10 +22,6 @@
     "noImplicitThis": true,
     "strictNullChecks": true,
     "moduleResolution": "Node",
-    "isolatedModules": true,
-    "baseUrl": "./",
-    "paths": {
-      "@helpers/*": ["../../helpers/*"]
-    }
+    "isolatedModules": true
   }
 }

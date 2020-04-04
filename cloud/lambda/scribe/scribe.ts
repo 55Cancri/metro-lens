@@ -3,16 +3,8 @@ import * as lambda from 'aws-lambda'
 import axios from 'axios'
 import * as rx from 'rxjs'
 import * as op from 'rxjs/operators'
-import logger from 'winston'
-// @ts-ignore
-import { format as f } from 'logform/dist/browser'
-// import { format } from 'logform/dist/browser'
 
-import { test } from '../utils/test'
-
-const format = f as typeof logger.format
-
-test()
+import { winston } from '../utils/unicorns'
 
 type Options = {
   url: string
@@ -45,31 +37,8 @@ const urls = {
   wPredictions: '',
 }
 
-const myFormat = format.printf(({ level, message, label, timestamp }) => {
-  return `${timestamp} [${label}] ${level}: ${message}`
-})
-
-// logger.format.
-const winston = logger.createLogger({
-  format: format.combine(
-    format.label({
-      label: 'Sup',
-    }),
-    format.timestamp(),
-    myFormat
-  ),
-  transports: [new logger.transports.Console()],
-})
-
 /* setup dynamodb client */
 const dynamodb = new aws.DynamoDB.DocumentClient()
-
-/**
- * Print the entire contents to the lambda logs.
- *
- * @param item
- */
-const lambdaLog = (item: unknown) => console.log(JSON.stringify(item, null, 2))
 
 /**
  * Get the current time in ISO format.
@@ -130,8 +99,6 @@ export const handler = async (
     },
   }).pipe()
 
-  winston.info('Hi there.')
-
   /* wmata buses */
   // const wmata = await axios.get(
   //   'https://api.wmata.com/NextBusService.svc/json/jPredictions',
@@ -141,7 +108,6 @@ export const handler = async (
   //   }
   // )
 
-  console.log(`[${new Date().toLocaleString()}]: Hello World!`)
   // console.log(wmata.data)
   // console.log(connector.data)
   const response = JSON.stringify(event, null, 2)
