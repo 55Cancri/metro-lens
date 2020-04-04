@@ -199,7 +199,7 @@ export class MetroLensStack extends cdk.Stack {
       handler: 'handler',
       /* include reuseable node modles */
       layers: [layer],
-      timeout: cdk.Duration.seconds(10),
+      timeout: cdk.Duration.seconds(120),
       description: 'Ensure all vehicle ids are present in the database.',
       environment: {
         SORT_KEY: 'id',

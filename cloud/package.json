@@ -39,8 +39,9 @@
     "snapshot": "jest -u --coverage",
     "test": "jest --coverage",
     "test-watch": "jest --watchAll --coverage",
+    "cdk-deploy": "cdk deploy",
     "deploy": "../deploy.sh",
-    "cdk-deploy": "cdk deploy"
+    "invoke": "../invoke.sh"
   },
   "dependencies": {
     "axios": "^0.19.2",

@@ -1,9 +1,21 @@
 import * as aws from 'aws-sdk'
-import * as lambda from 'aws-lambda'
-import now from 'performance-now'
 import * as time from 'date-fns'
+import * as lambda from 'aws-lambda'
+import asyncPool from 'tiny-async-pool'
+import now from 'performance-now'
 import axios from 'axios'
 import util from 'util'
+
+/* define dynamodb constants */
+const TABLE_NAME = process.env.TABLE_NAME || ''
+const PRIMARY_KEY = process.env.PRIMARY_KEY || ''
+const SORT_KEY = process.env.SORT_KEY || ''
+const KEY = process.env.CONNECTOR_KEY || ''
+const MAX_DYNAMO_REQUESTS = 25
+
+/* define error constants */
+const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
+const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb error, please take a look at your CloudWatch Logs.`
 
 type Route = {
   rt: string
@@ -23,6 +35,42 @@ type Vehicle = {
   active: boolean
   lastChecked: string
   dateCreated: string
+}
+
+type Pt = {
+  seq: number
+  lat: number
+  lon: number
+  typ: 'S' | 'W'
+  stpid: string
+  stpnm: string
+  pdist: number
+}
+
+type RouteDirection = 'North' | 'South' | 'East' | 'West'
+
+type Pattern = {
+  pid: number
+  ln: number
+  rtdir: RouteDirection
+  pt: Pt[]
+}
+
+// type PartitionKey = {
+//   [PRIMARY_KEY: string]: 'bus' | 'route' | 'user' | 'metadata'
+// }
+
+// type SortKey = { [key: string]: string }
+
+// type RoutePatternItem = PartitionKey & SortKey & {
+type RoutePatternItem = {
+  // [key: string]: string
+  routeDirection: RouteDirection
+  stopName: string
+  stopId: string
+  sequence: number
+  lat: number
+  lon: number
 }
 
 type RouteObject = Pick<Vehicle, 'active' | 'lastChecked'>
@@ -78,17 +126,6 @@ export class StopWatch {
 /* setup dynamodb client */
 const client = new aws.DynamoDB.DocumentClient()
 
-/* define dynamodb constants */
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const PRIMARY_KEY = process.env.PRIMARY_KEY || ''
-const SORT_KEY = process.env.SORT_KEY || ''
-const KEY = process.env.CONNECTOR_KEY || ''
-const MAX_DYNAMO_REQUESTS = 25
-
-/* define error constants */
-const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
-const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb error, please take a look at your CloudWatch Logs.`
-
 const trace = (item: unknown) =>
   console.log(util.inspect(item, false, null, true))
 
@@ -140,6 +177,19 @@ const chunk = (arr: unknown[], size: number) =>
     arr.slice(i * size, i * size + size)
   )
 
+const packageAndShip = async (items: unknown[]) => {
+  const payload = items.map((Item) => ({ PutRequest: { Item } }))
+
+  // /* chunk the the payloads, */
+  const requests = chunk(payload, MAX_DYNAMO_REQUESTS)
+
+  /**
+   * Then batch save all the items to dynamoDB,
+   * one chunk at a time.
+   */
+  return Promise.all(requests.map(batchPutItems))
+}
+
 /**
  * The goal of this lambda is simple — to update the status of every route
  * and the status of every vehicle of the *active* routes.
@@ -165,6 +215,15 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     ExpressionAttributeValues: { ':pk': 'route', ':skv': 'status' },
   }
 
+  /* query by route + status_ */
+  const routeLaneParams = (routeId: string): QueryParams => ({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
+    ExpressionAttributeNames: { '#pk': PRIMARY_KEY, '#sk': SORT_KEY },
+    ExpressionAttributeValues: { ':pk': 'route', ':skv': `map_${routeId}` },
+    Limit: 1,
+  })
+
   /* query by bus + metadata_ */
   const metadataParams: QueryParams = {
     TableName: TABLE_NAME,
@@ -189,13 +248,13 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     .promise()
 
   /* map the array into a map for comparison with the api response */
-  const routeStatusMap = routeStatusDb?.reduce(
+  const routeStatusMap = <RouteMap>routeStatusDb?.reduce(
     (store, { route, active, lastChecked }) => ({
       ...store,
       [route]: { active, lastChecked },
     }),
     {}
-  ) as RouteMap
+  )
 
   /* store the saved dynamodb vehicles in a map */
   const vehicleMapDb = vehicleStatusDb?.reduce((store, { id, ...rest }) => {
@@ -206,17 +265,17 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     return { ...store, [vehicleId]: rest }
   }, {}) as { [key: string]: Vehicle }
 
-  console.log('Db Routes')
-  lambdaLog(routeStatusDb?.slice(0, 3))
+  // console.log('Db Routes')
+  // lambdaLog(routeStatusDb?.slice(0, 3))
 
-  console.log('Db Vehicles')
-  lambdaLog(vehicleStatusDb?.slice(0, 3))
+  // console.log('Db Vehicles')
+  // lambdaLog(vehicleStatusDb?.slice(0, 3))
 
-  console.log('Routes map')
-  lambdaLog(routeStatusMap)
+  // console.log('Routes map')
+  // lambdaLog(routeStatusMap)
 
-  console.log('Vehicles map')
-  lambdaLog(vehicleMapDb)
+  // console.log('Vehicles map')
+  // lambdaLog(vehicleMapDb)
 
   /* make the getroutes api call */
   const {
@@ -269,7 +328,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
       /* if the call returned vehicle data as a successful response, */
       if ('vehicle' in routeData) {
         /* extract the vehicle information */
-        const { vehicle } = routeData as { vehicle: VehicleApi[] }
+        const { vehicle } = <{ vehicle: VehicleApi[] }>routeData
 
         /* update or create a new record for the route in dynamodb */
         const saveRouteStatus = client
@@ -365,6 +424,57 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
   // /* get the vehicle ids for every route */
   // const allVehicles = await Promise.all(routes.map(getVehicles))
+
+  const updatePatterns = async ({ rt, rtnm }: Route) => {
+    /* get the current vehicle ids */
+    const { Items: routeLaneDb } = await client
+      .query(routeLaneParams(rt))
+      .promise()
+
+    if (routeLaneDb?.length === 0) {
+      /* then get the vehicles based on that rt parameter */
+      const {
+        data: response,
+      } = await axios.get(
+        'https://www.fairfaxcounty.gov/bustime/api/v3/getpatterns',
+        { params: { ...defaultParams, rt } }
+      )
+
+      const routeLaneData = response['bustime-response']
+
+      if ('ptr' in routeLaneData) {
+        const [pattern] = <Pattern[]>routeLaneData.ptr
+
+        const { rtdir, pt } = pattern
+
+        const routeLane = pt.reduce((store, item) => {
+          const { typ, lat, lon, ...rest } = item
+
+          const stopConstraint = typ === 'S' || typ === 'W'
+
+          const stopType = stopConstraint && (typ === 'S' ? 'stop' : 'waypoint')
+
+          return [
+            ...store,
+            {
+              [PRIMARY_KEY]: 'route',
+              [SORT_KEY]: `map_${rt}_${stopType}_${rest.seq}`,
+              routeDirection: rtdir,
+              stopName: rest.stpnm,
+              stopId: rest.stpid,
+              sequence: rest.seq,
+              lat,
+              lon,
+            },
+          ]
+        }, [] as RoutePatternItem[])
+
+        await packageAndShip(routeLane)
+      }
+    }
+  }
+
+  await asyncPool(5, routes, updatePatterns)
 
   /* get the vehicle ids for every route and flatten the nested arrays */
   const apiVehicles = (await Promise.all(

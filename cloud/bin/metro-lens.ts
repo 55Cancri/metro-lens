@@ -43,8 +43,6 @@ const synth = async (): Promise<number> => {
 
   const props = getEnvironmentVariables()
 
-  console.log({ typeof: typeof MetroLensStack, filename: __filename })
-
   /* initialize the stack */
   new MetroLensStack(app, 'MetroLensStack', props)
 
@@ -60,7 +58,8 @@ synth()
   .then(() => {
     const now = time.format(new Date(), 'hh:mmaaaaa')
     const timestamp = chalk.bold.green(`[${now}m]:`)
-    console.log(`${timestamp} Finished deployment.`)
+    /* turn off so that sam cli does not have issues reading the generated template.yaml */
+    // console.log(`${timestamp} Finished deployment.`)
   })
   .catch((error: Error) => {
     console.error(
