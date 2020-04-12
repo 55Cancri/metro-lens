@@ -360,7 +360,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
             ...vehicleInMap,
             [PRIMARY_KEY]: 'bus',
             [SORT_KEY]: id,
-            lastCheck: lastChecked,
+            lastChecked: lastChecked,
             active: true,
             vid,
             rt,

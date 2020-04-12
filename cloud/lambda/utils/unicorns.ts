@@ -10,7 +10,7 @@ const format = SAFE_format as typeof logger.format
 const myFormat = format.printf(({ level, message, label, timestamp }) => {
   const now = time.format(new Date(timestamp), 'yyyy-MM-dd hh:mm:ssa')
   // const stamp = chalk.bold.green(`[${now}m]:`)
-  return `[ ${now} ] ${level}: ${JSON.stringify(message, null, 2)}`
+  return `[${now}] ${level}: ${JSON.stringify(message, null, 2)}`
 })
 
 export const winston = logger.createLogger({
@@ -21,3 +21,14 @@ export const winston = logger.createLogger({
   ),
   transports: [new logger.transports.Console()],
 })
+
+/**
+ * Print the entire contents to the lambda logs.
+ *
+ * @param item
+ */
+export const print = (item: unknown) =>
+  console.log(JSON.stringify(item, null, 2))
+
+export const is = <T>(value: unknown, condition: boolean): value is T =>
+  condition

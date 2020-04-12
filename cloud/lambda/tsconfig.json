@@ -17,7 +17,6 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-
     "noImplicitAny": true,
     "noImplicitThis": true,
     "strictNullChecks": true,

@@ -158,6 +158,7 @@ export class MetroLensStack extends cdk.Stack {
     const lambdaScribe = new nodejs.NodejsFunction(this, 'scribe', {
       functionName: 'scribe',
       runtime: lambda.Runtime.NODEJS_12_X,
+      timeout: cdk.Duration.seconds(90),
       /* code loaded from dist directory */
       entry: './lambda/scribe/scribe.ts',
       // code: lambda.Code.fromAsset('lambda/dist'),
@@ -224,6 +225,7 @@ export class MetroLensStack extends cdk.Stack {
 
     /* grant the lambda access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
+    metrolensTable.grantReadWriteData(lambdaScribe)
 
     /* create a new topic for lambda errors */
     const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic', {

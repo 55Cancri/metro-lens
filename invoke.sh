@@ -26,9 +26,10 @@ fi
 
 # load zsh presets and aliases (e.g. cdk alias) without logging anything
 source ~/.zshrc > /dev/null 2>&1
+# source ~/.bashrc > /dev/null 2>&1
 
 
-# get the location of this script
+# get the location of this script (without logging stdout or stderr)
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # cd to the script directory and run commands from there
@@ -39,16 +40,35 @@ cd cloud
 
 # save the generated cloudformation template to a file
 cdk synth --no-staging > template.yaml
+# cdk synth --no-staging 2>&1 | tee template.yaml
+echo "\n\n\n${green}${bold}${checkmark} Generated template.yaml.${reset}\n\n\n\n"
 
-echo "\n${green}${bold}${checkmark} Generated template.yaml.${reset}\n"
+sleep 1
 
-# start the default docker if it is not already running
-docker-machine start
+# start the default docker if it is not already running (without logging stdout)
+docker-machine start > /dev/null
+echo -e  "\r\033[6A\033[0K${green}${bold}${checkmark} Docker is running.${reset}\n\n"
 
-echo "\n${green}${bold}${checkmark} Docker is running.${reset}\n"
 
+sleep 1
+
+# from the message:
+# Started machines may have new IP addresses.
+# You may need to re-run the `docker-machine env` command. (without logging stdout)
+docker-machine env default > /dev/null
+echo -e  "\r\033[3A\033[0K${green}${bold}${checkmark} Captured docker IP address.${reset}\n\n"
+
+sleep 1
+
+# configure docker to work with my shell (without logging stdout)
+eval $(docker-machine env default) > /dev/null
+echo -e  "\r\033[3A\033[0K${green}${bold}${checkmark} Configured docker to shell.${reset}\n\n"
+
+sleep 1
 
 # invoke the lambda using the logical id of the lambda in the template.yaml
-sam local invoke $lambda --no-event
-
-echo "\n${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}\n"
+# sam local invoke $lambda --no-event --profile default
+sam local invoke $lambda --no-event --docker-network host --profile default
+# sam local invoke $lambda --env-vars env.json --no-event --profile default
+# sam local invoke $lambda --no-event --profile default --region us-east-1
+echo -e "\r\033[1A\033[0K${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}"
