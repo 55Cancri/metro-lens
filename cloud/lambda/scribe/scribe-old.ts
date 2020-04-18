@@ -7,7 +7,7 @@ import * as Op from 'rxjs/operators'
 import { winston, print, is } from '../utils/unicorns'
 import { buses } from '../mocks/buses'
 import type { RequestOptions } from '../types'
-import type { BusItem } from '../types/dynamodb'
+import type { BusStatusItem } from '../types/dynamodb'
 import * as Api from '../types/api'
 // import type {
 //   ConnectorApiBusPredictions,
@@ -82,7 +82,7 @@ const fromRequest = async (options: RequestOptions) => {
 const fromQuery = (params: QueryParams) => {
   const dynamodbQuery = async () => {
     const { Items } = await dynamodb.query(params).promise()
-    return <BusItem[]>Items
+    return <BusStatusItem[]>Items
   }
   return Rx.from(dynamodbQuery())
 }

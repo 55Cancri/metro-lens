@@ -346,24 +346,29 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
           .promise()
 
         /* then map through the vehicle array and create param objects */
-        const vehicles = vehicle.map(({ vid }) => {
+        const vehicles = vehicle.map(({ vid: vehicleId }) => {
           /* define the dynamodb sort key */
-          const id = `status_${vid}`
+          const id = `status_${vehicleId}`
 
-          const vehicleInMap = vehicleMapDb[vid]
+          const vehicleInMap = vehicleMapDb[vehicleId]
 
           /* define the date created for this record if it doesn't exist already */
           const vehicleDateCreated = !vehicleInMap ? { dateCreated: now } : {}
+          const discoveredVehicleRoutes = vehicleInMap
+            ? vehicleInMap.routes
+            : []
 
           /* this object will create or update the vehicle record in dynamodb */
           return {
             ...vehicleInMap,
             [PRIMARY_KEY]: 'bus',
             [SORT_KEY]: id,
-            lastChecked: lastChecked,
             active: true,
-            vid,
-            rt,
+            lastChecked,
+            vehicleId,
+            routes: !discoveredVehicleRoutes.includes(rt)
+              ? [...discoveredVehicleRoutes, rt]
+              : [rt],
             // dateCreated: now,
             ...vehicleDateCreated,
           }
@@ -378,6 +383,8 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
       /* otherwise if an error returned, */
       if ('error' in routeData) {
+        /* no need to map over the errors because this is a status update */
+
         /* create or update the inactive and lastCheck time for the route */
         const saveRouteStatus = client
           .put({
@@ -385,8 +392,8 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
             Item: {
               [PRIMARY_KEY]: 'route',
               [SORT_KEY]: `status_${rt}`,
-              route: rt,
               active: false,
+              route: rt,
               lastChecked,
               ...routeDateCreated,
             },
@@ -431,6 +438,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
       .query(routeLaneParams(rt))
       .promise()
 
+    /* should only be run once to populate dynamodb with route lat and lon */
     if (routeLaneDb?.length === 0) {
       /* then get the vehicles based on that rt parameter */
       const {
@@ -442,6 +450,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
       const routeLaneData = response['bustime-response']
 
+      /* will save most amount of data--every stop and waypoint for every route-- ~20k records */
       if ('ptr' in routeLaneData) {
         const [pattern] = <Pattern[]>routeLaneData.ptr
 

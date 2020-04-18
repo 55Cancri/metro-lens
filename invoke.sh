@@ -68,7 +68,8 @@ sleep 1
 
 # invoke the lambda using the logical id of the lambda in the template.yaml
 # sam local invoke $lambda --no-event --profile default
-sam local invoke $lambda --no-event --docker-network host --profile default
+sam local invoke $lambda --env-vars env.json --no-event --profile default
+# sam local invoke $lambda --no-event --docker-network host --profile default
 # sam local invoke $lambda --env-vars env.json --no-event --profile default
 # sam local invoke $lambda --no-event --profile default --region us-east-1
 echo -e "\r\033[1A\033[0K${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}"
