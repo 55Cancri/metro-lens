@@ -192,8 +192,6 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     return { ...store, [stop.routeId]: { [stop.stopId]: stop } }
   }, {} as Record<string, any>)
 
-  // winston.info({ stopsGroupedByRoute })
-
   /* -------------------------------------------------------------------------- */
   /*                    Get map data, possibly from api calls                   */
   /* -------------------------------------------------------------------------- */
@@ -286,12 +284,6 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   /*                           Save items to DynamoDb                           */
   /* -------------------------------------------------------------------------- */
 
-  await Promise.all([
-    dynamoService.write(totalApiCountItem),
-    dynamoService.write(recentApiCountItem, { history: true }),
-    dynamoService.write(updatedActiveVehiclesItem),
-  ])
-
   /* if there are stops that need to be populated */
   /* chunk the stop items into arrays of 25 items */
   const chunkedItemRequests = arrayUtils.chunk(
@@ -302,19 +294,27 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     MAX_DYNAMO_REQUESTS
   )
 
-  winston.info({
-    // stopItemSample: stopItems[0],
-    // mapItemSample: mapItems[0],
-    chunkedItemSample: chunkedItemRequests.length,
-  })
-
-  // const chunkedItemRequests = arrayUtils.chunk(
-  //   [dynamoService.mapToPutRequest(stopItems)] as Dynamo.WriteRequest[],
-  //   MAX_DYNAMO_REQUESTS
-  // )
-
   try {
-    // await Promise.all(chunkedItemRequests.map(dynamoService.batchWrite))
+    winston.info('Saving prediction updates')
+
+    /* kick off the single writes to dynamodb for bus predictions and api count */
+    const singleWrites = await Promise.all([
+      dynamoService.write(totalApiCountItem),
+      dynamoService.write(recentApiCountItem, { history: true }),
+      dynamoService.write(updatedActiveVehiclesItem),
+    ])
+    winston.info('Finished saving prediction updates.')
+    winston.info('Saving stops and maps: ' + chunkedItemRequests.length)
+
+    /* kick off the batch writes to dynamodb for stops and map items */
+    const batchWrites = await Promise.all(
+      chunkedItemRequests.map(dynamoService.batchWrite)
+    )
+
+    winston.info('Finished saving stops and maps.')
+
+    await singleWrites
+    await batchWrites
   } catch (error) {
     winston.error(error)
   }

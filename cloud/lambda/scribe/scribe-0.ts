@@ -71,11 +71,6 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   /* extract the previous bus predictions: entity - "bus", id - "route_id"  */
   const { prevBusRoutes } = buses
 
-  // winston.info('query by active buses')
-
-  // /* get the active buses current saved in dynamodb */
-  // const activeBusesDb = await dynamoService.getActiveBuses()
-
   /* define the api params in case the api call needs to be made */
   const params = { key: CONNECTOR_KEY, format: 'json' } as const
 
@@ -99,9 +94,11 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   /* batch the vehicles into arrays of 10 */
   const chunkedVehicleIds = arrayUtils.chunk(activeVehicleIds, 10)
 
-  winston.info(
-    chunkedVehicleIds.map((listOfVehicleIds) => listOfVehicleIds.join(','))
-  )
+  const vehiclesToBeUpdated = chunkedVehicleIds.map((listOfVehicleIds, i) => ({
+    ['api set ' + i + 1]: listOfVehicleIds.join(','),
+  }))
+
+  winston.info('The following vehicles will be updated: ' + vehiclesToBeUpdated)
 
   /* create an array of the api parameter objects for the api calls */
   const batchedVehicleIds: Api.HttpClientConnectorParams[] = chunkedVehicleIds.map(
@@ -129,7 +126,6 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       return [...store, ...vehicle.error]
     }, [] as Api.ConnectorVehicleOrError[])
   )
-  // .then((data) => data.map(vehicles ? vehicles.vehicle : vehicles.error))
 
   /* kick off a call for the predictions */
   /* convert [ { prd: [ { vid: 2101 } ] }, ... ] -> [ { vid: 2101 }, ... ] */
@@ -218,18 +214,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
     const predictions = predictionsMap[key] as Dynamo.Prediction[]
 
-    winston.info('Updating predictions for ' + vehicleId)
-
     const data = { rt, lat, lon, vehicleId, predictions, lastUpdateTime }
 
     return { ...store, [key]: data }
   }, prevBusRoutes)
-
-  // winston.info('PREDICTIONS MAP')
-  // winston.info(predictionsMap)
-
-  // winston.info('VEHICLE MAP')
-  // winston.info(vehicleMap)
 
   /* log the size of the vehicle map */
   winston.info(

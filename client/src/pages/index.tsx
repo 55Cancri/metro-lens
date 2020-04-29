@@ -7,5 +7,5 @@ export default {
   SplashPage,
   DashboardPage,
   RegisterPage,
-  LoginPage
+  LoginPage,
 }
