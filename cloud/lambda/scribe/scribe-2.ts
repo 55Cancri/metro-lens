@@ -10,21 +10,18 @@ import { dynamoServiceProvider } from '../services/dynamodb'
 import { dateServiceProvider } from '../services/date'
 
 import * as arrayUtils from '../utils/arrays'
-import { winston, print, is } from '../utils/unicorns'
+import { winston } from '../utils/unicorns'
 import { busMocks } from '../mocks/buses'
 
 import * as Dynamo from '../types/dynamodb'
 import * as Api from '../types/api'
 
+/* ensure the dynamo table is in the correct region */
 aws.config.update({ region: 'us-east-1' })
 
-winston.info(
-  `localstack_hostname: ${process.env.LOCALSTACK_HOSTNAME}. aws_sam_local: ${process.env.AWS_SAM_LOCAL}`
-)
-
-/* environment variables */
+/* initialize the environment variables */
 const TABLE_NAME = process.env.TABLE_NAME || ''
-const PRIMARY_KEY = process.env.PRIMARY_KEY || ''
+const PARTITION_KEY = process.env.PARTITION_KEY || ''
 const SORT_KEY = process.env.SORT_KEY || ''
 const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
 const MAX_DYNAMO_REQUESTS = 25
@@ -35,39 +32,27 @@ const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb err
 
 /* setup dynamodb client */
 const dynamodb = new aws.DynamoDB.DocumentClient()
-// const dynamodb = new aws.DynamoDB.DocumentClient({
-//   apiVersion: 'latest',
-//   region: 'us-east-1',
-//   // @ts-ignore
-//   // endpoint:
-//   //   (process.env.AWS_SAM_LOCAL &&
-//   //     new aws.Endpoint('http://host.docker.internal')) ||
-//   //   undefined,
-// })
 
+/* define the handler */
 export const handler = async (event?: lambda.APIGatewayEvent) => {
   winston.info('Start.')
 
-  winston.info('Running invoke with: ', TABLE_NAME)
-
-  // define the params object
-  const Params = { TableName: 'metro' }
-
-  // scan for the table, filtering on a doc type of initial or district invoice
-  const results = await dynamodb.scan(Params).promise()
-
-  console.log(results.Items?.[0])
-
   /* initialize services */
-  // !NOTE: do not instantiate these here. Do so in a wrapper for the lambda so they can be injected
+  // !NOTE: do not instantiate these here.
+  // !Do so in a wrapper for the lambda so they can be injected
   const dateService = dateServiceProvider()
   const apiService = apiServiceProvider({ httpClient: axios })
   const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
 
-  /* get the total number of api calls ever made */
-  const [
-    { apiCountTotal: prevApiCountTotal = 0 },
-  ] = await dynamoService.getApiCountTotal()
+  /* get the total number of api calls saved to dynamodb */
+  const prevApiCountTotal = await dynamoService.getApiCountTotal()
+  // const prevApiCountResults = await dynamoService.getApiCountTotal()
+
+  /* define the total number of api calls ever made */
+  // const prevApiCountTotal =
+  //   prevApiCountResults.length > 0 ? prevApiCountResults[0].apiCountTotal : 0
+
+  winston.info({ prevApiCountTotal })
 
   /* get the metadata of active buses */
   const statusOfActiveBuses = await dynamoService.getStatusOfActiveBuses()
@@ -77,10 +62,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     statusOfActiveBuses
   )
 
-  winston.info({ prevApiCountTotal, buses: dataOfActiveBuses })
-
   /* get the vehicleIds of the active buses */
-  const vehicleIds = dataOfActiveBuses.map((bus) => bus.vehicleId)
+  const vehicleIds = statusOfActiveBuses.map(R.prop('vehicleId'))
+
+  // winston.info({ vehicleIds })
 
   /* create a map of active buses for constant time lookup */
   const statusMap = statusOfActiveBuses.reduce(
@@ -88,7 +73,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       ...store,
       [vehicleId]: { ...rest, vehicleId },
     }),
-    {} as { [k: string]: Dynamo.BusStatusItem }
+    {} as Record<string, Dynamo.BusStatusItem>
   )
 
   /* create a map of active buses for constant time lookup */
@@ -97,7 +82,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       ...store,
       [vehicleId]: { ...rest, vehicleId },
     }),
-    {} as { [k: string]: Dynamo.BusVehicleItem }
+    {} as Record<string, Dynamo.BusVehicleItem>
   )
 
   /* batch the vehicles into groups of 10 */
@@ -111,16 +96,6 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       vid: vehicleIdArray.join(','),
     })
   )
-
-  /* make an api call and extract the bustime-response */
-  // const makeDualApiCalls = async (options: Api.HttpClientOptions) => {
-  //   const { data } = (await axios.get(options.url, {
-  //     headers: { 'Content-Type': 'application/json' },
-  //     params: options.params,
-  //   })) as Api.ConnectorApiBase
-
-  //   return data['bustime-response']
-  // }
 
   /* make the parallel api calls. Should be array of merged bus information */
   const [busResults] = await Promise.all(
@@ -138,14 +113,13 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const isSuccessItem = (
     item: Api.ConnectorJoin | Api.ConnectorError
   ): item is Api.ConnectorJoin => {
+    /* use a random property from the success response */
     if ('stpid' in item) return true
     return false
   }
 
   /* map an item to the format of a batch write request */
-  const mapToRequest = (
-    Item: Dynamo.BusVehicleItem | Dynamo.BusStatusItem
-  ) => ({
+  const mapToRequest = <T>(Item: T) => ({
     PutRequest: { Item },
   })
 
@@ -176,73 +150,58 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       }
     }
 
-    // otherwise return date created? huh?
-    // return { dateCreated: timestamp }
-    // return { ...bus, active: false, dateCreated: timestamp }
-
-    // bus from api response returned false. Set to inactive
-    // return { ...stateOfLastBus, active: false, dateCreated: timestamp }
+    // otherwise the bus returned an error so set to status to false
     return { ...statusOfLastBus, active: false, lastChecked: timestamp }
   }
 
+  /* extract the merged bus data and the inactive buses */
   const { data, errors } = busResults
 
+  // winston.info({ data, errors })
+
+  /* map the active buses to dynamo items */
   const activeBuses = data.map(R.compose(mapToRequest, mapToItem))
+
+  /* map the inactive buses to dynamo items */
   const inactiveBuses = errors.map(R.compose(mapToRequest, mapToItem))
 
-  /* convert bus responses to dynamodb items */
-  // const updatedBusItems = busResults.reduce((store, response) => {
-  //   /* extract the pdr and err from the response  */
-  //   // !prd and error no longer exist
-  //   const { prd, error } = response
-
-  //   /* map the active buses to dynamodb items */
-  //   // !response.prd is now just response
-  //   const activeBuses =
-  //     'prd' in response
-  //       ? response.prd!.map(R.compose(mapToRequest, mapToItem))
-  //       : []
-
-  //   /* map the inactive buses to dynamodb items */
-  //   // !response.error is now just response
-  //   const inactiveBuses =
-  //     'error' in response
-  //       ? response.error!.map(R.compose(mapToRequest, mapToItem))
-  //       : []
-
-  //   /* return the concatenated arrays  */
-  //   return [...store, ...activeBuses, ...inactiveBuses]
-  // }, [] as Dynamo.PutRequest[])
-
-  const apiCountItem = dynamoService.generateItem({
+  /* define a dynamo item for the number of api calls just made */
+  const recentApiCountItem = dynamoService.generateItem({
     pk: 'api_counter',
     sk: dateService.getNowInISO(),
+    calledBy: 'scribe',
     apiCount,
   })
-  const apiCountTotalItem = dynamoService.generateItem({
+
+  /* define a dynamo item for the total number of api calls */
+  const totalApiCountItem = dynamoService.generateItem({
     pk: 'api_counter',
     sk: 'total',
+    lastUpdatedBy: 'scribe',
+    lastUpdated: dateService.getNowInISO(),
     apiCountTotal,
   })
+
+  winston.info({ recentApiCountItem, totalApiCountItem })
 
   /* chunk the dynamodb items into arrays of 25 items */
   const chunkedBusItems = arrayUtils.chunk(
     [
       ...activeBuses,
       ...inactiveBuses,
-      // ...updatedBusItems,
-      apiCountItem,
-      apiCountTotalItem,
+      mapToRequest(recentApiCountItem),
+      mapToRequest(totalApiCountItem),
     ] as Dynamo.WriteRequest[],
     25
   )
 
-  // winston.info(chunkedBusItems)
-  winston.info({ apiCountTotal })
+  // winston.info({ chunkedBusItems })
 
   const updateBusesAndApiCount = await Promise.all(
     chunkedBusItems.map(dynamoService.batchWrite)
   )
+
+  winston.info('Done.')
 
   /* wmata buses */
   // const wmata = await axios.get(

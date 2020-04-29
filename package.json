@@ -7,15 +7,15 @@
     "invoke": "./invoke.sh"
   },
   "dependencies": {
-    "date-fns": "^2.11.1",
-    "husky": "^4.2.3",
+    "date-fns": "^2.12.0",
+    "husky": "^4.2.5",
     "performance-now": "^2.1.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^8.3.5",
     "@commitlint/config-conventional": "^8.3.4",
     "cz-conventional-changelog": "3.1.0",
-    "prettier": "^1.19.1"
+    "prettier": "^2.0.4"
   },
   "config": {
     "commitizen": {

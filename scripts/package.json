@@ -4,13 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "../deploy.sh",
+    "invoke": "../invoke.sh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.658.0"
+    "@tensorflow/tfjs-node-gpu": "^1.7.3",
+    "aws-sdk": "^2.658.0",
+    "date-fns": "^2.12.0",
+    "date-fns-timezone": "^0.1.4"
   },
   "devDependencies": {
     "@types/node": "^13.13.0",

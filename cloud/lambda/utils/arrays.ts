@@ -1,5 +1,12 @@
 /**
- *
+ * Guard against spreading undefined values.
+ * @param arr array to chunk
+ */
+export const defaultSpread = <T>(arr: T[] | undefined): T[] =>
+  typeof arr === 'undefined' ? [] : arr
+
+/**
+ * Chunk an array into smaller pieces.
  * @param arr array to chunk
  * @param size the size of each chunked array
  */

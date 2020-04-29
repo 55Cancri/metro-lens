@@ -6,9 +6,12 @@ import now from 'performance-now'
 import axios from 'axios'
 import util from 'util'
 
+/* sam invocation is liable to fail without this update */
+aws.config.update({ region: 'us-east-1' })
+
 /* define dynamodb constants */
 const TABLE_NAME = process.env.TABLE_NAME || ''
-const PRIMARY_KEY = process.env.PRIMARY_KEY || ''
+const PARTITION_KEY = process.env.PARTITION_KEY || ''
 const SORT_KEY = process.env.SORT_KEY || ''
 const KEY = process.env.CONNECTOR_KEY || ''
 const MAX_DYNAMO_REQUESTS = 25
@@ -30,7 +33,7 @@ type Vehicle = {
   entity: string
   id: string
   rt: string
-  vid: string
+  vehicleId: string
   routes: string[]
   active: boolean
   lastChecked: string
@@ -57,7 +60,7 @@ type Pattern = {
 }
 
 // type PartitionKey = {
-//   [PRIMARY_KEY: string]: 'bus' | 'route' | 'user' | 'metadata'
+//   [PARTITION_KEY: string]: 'bus' | 'route' | 'user' | 'metadata'
 // }
 
 // type SortKey = { [key: string]: string }
@@ -124,7 +127,7 @@ export class StopWatch {
 }
 
 /* setup dynamodb client */
-const client = new aws.DynamoDB.DocumentClient()
+const dynamodb = new aws.DynamoDB.DocumentClient()
 
 const trace = (item: unknown) =>
   console.log(util.inspect(item, false, null, true))
@@ -166,7 +169,7 @@ const batchPutItems = async (requests: unknown[]) => {
   } as aws.DynamoDB.DocumentClient.BatchWriteItemInput
 
   /* call the batch write to save the items to the table */
-  return client.batchWrite(params).promise()
+  return dynamodb.batchWrite(params).promise()
 }
 
 /**
@@ -211,25 +214,34 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   const routeStatusParams: QueryParams = {
     TableName: TABLE_NAME,
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-    ExpressionAttributeNames: { '#pk': PRIMARY_KEY, '#sk': SORT_KEY },
+    ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
     ExpressionAttributeValues: { ':pk': 'route', ':skv': 'status' },
   }
 
-  /* query by route + status_ */
+  /* query by route + map_ */
+  /* should only be called once to get stop values */
   const routeLaneParams = (routeId: string): QueryParams => ({
     TableName: TABLE_NAME,
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-    ExpressionAttributeNames: { '#pk': PRIMARY_KEY, '#sk': SORT_KEY },
+    ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
     ExpressionAttributeValues: { ':pk': 'route', ':skv': `map_${routeId}` },
     Limit: 1,
   })
 
   /* query by bus + metadata_ */
+  // !I dont think this is needed anymore
   const metadataParams: QueryParams = {
     TableName: TABLE_NAME,
     KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-    ExpressionAttributeNames: { '#pk': PRIMARY_KEY, '#sk': SORT_KEY },
+    ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
     ExpressionAttributeValues: { ':pk': 'bus', ':skv': 'metadata' },
+  }
+  /* query by api_counter + total */
+  const apiCounterParams: QueryParams = {
+    TableName: TABLE_NAME,
+    KeyConditionExpression: '#pk = :pk AND #sk = :sk',
+    ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
+    ExpressionAttributeValues: { ':pk': 'api_counter', ':sk': 'total' },
   }
 
   /* define the default params */
@@ -238,13 +250,18 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   // let vehicleCount = 0
 
   /* get the stored status of the routes */
-  const { Items: routeStatusDb } = await client
+  const { Items: routeStatusDb } = await dynamodb
     .query(routeStatusParams)
     .promise()
 
   /* get the current vehicle ids */
-  const { Items: vehicleStatusDb } = await client
+  const { Items: vehicleStatusDb } = await dynamodb
     .query(metadataParams)
+    .promise()
+
+  /* get the total api counts */
+  const { Items: apiCountTotal } = await dynamodb
+    .query(apiCounterParams)
     .promise()
 
   /* map the array into a map for comparison with the api response */
@@ -264,18 +281,6 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     /* assign the vehicle data object to the vehicle id key */
     return { ...store, [vehicleId]: rest }
   }, {}) as { [key: string]: Vehicle }
-
-  // console.log('Db Routes')
-  // lambdaLog(routeStatusDb?.slice(0, 3))
-
-  // console.log('Db Vehicles')
-  // lambdaLog(vehicleStatusDb?.slice(0, 3))
-
-  // console.log('Routes map')
-  // lambdaLog(routeStatusMap)
-
-  // console.log('Vehicles map')
-  // lambdaLog(vehicleMapDb)
 
   /* make the getroutes api call */
   const {
@@ -303,7 +308,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     /* check if the route status already exists in dynamodb */
     const routeInMap: RouteObject = routeStatusMap[rt]
 
-    /* if an api call should be made for this route, */
+    /* will only call vehicle api if route is inactive */
     if (!routeInMap || shouldCheckRoute(routeInMap)) {
       /* then get the vehicles based on that rt parameter */
       const {
@@ -331,11 +336,11 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         const { vehicle } = <{ vehicle: VehicleApi[] }>routeData
 
         /* update or create a new record for the route in dynamodb */
-        const saveRouteStatus = client
+        const saveRouteStatus = dynamodb
           .put({
             TableName: TABLE_NAME,
             Item: {
-              [PRIMARY_KEY]: 'route',
+              [PARTITION_KEY]: 'route',
               [SORT_KEY]: `status_${rt}`,
               route: rt,
               active: true,
@@ -345,8 +350,23 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
           })
           .promise()
 
+        const getRoutes = (vehicleInMap: Vehicle, route: string) => {
+          /* step 1: 3 step process to add rt to the routes of the vehicle */
+          const existingVehicleRoutes = vehicleInMap ? vehicleInMap.routes : []
+
+          if (existingVehicleRoutes.length > 0) {
+            if (!existingVehicleRoutes.includes(route)) {
+              return [...existingVehicleRoutes, route]
+            }
+
+            return existingVehicleRoutes
+          }
+
+          return [route]
+        }
+
         /* then map through the vehicle array and create param objects */
-        const vehicles = vehicle.map(({ vid: vehicleId }) => {
+        const vehicles = vehicle.map(({ vid: vehicleId, ...rest }) => {
           /* define the dynamodb sort key */
           const id = `status_${vehicleId}`
 
@@ -354,22 +374,18 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
           /* define the date created for this record if it doesn't exist already */
           const vehicleDateCreated = !vehicleInMap ? { dateCreated: now } : {}
-          const discoveredVehicleRoutes = vehicleInMap
-            ? vehicleInMap.routes
-            : []
+
+          const routes = getRoutes(vehicleInMap, rt)
 
           /* this object will create or update the vehicle record in dynamodb */
           return {
             ...vehicleInMap,
-            [PRIMARY_KEY]: 'bus',
+            [PARTITION_KEY]: 'bus',
             [SORT_KEY]: id,
             active: true,
             lastChecked,
             vehicleId,
-            routes: !discoveredVehicleRoutes.includes(rt)
-              ? [...discoveredVehicleRoutes, rt]
-              : [rt],
-            // dateCreated: now,
+            routes,
             ...vehicleDateCreated,
           }
         })
@@ -378,6 +394,8 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         await saveRouteStatus
 
         /* return the params object to the map */
+        /* for each api call, return a variable count with the number 1 */
+        /* later on, all the count variables will be aggregated */
         return { vehicles, count: 1 }
       }
 
@@ -386,11 +404,11 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         /* no need to map over the errors because this is a status update */
 
         /* create or update the inactive and lastCheck time for the route */
-        const saveRouteStatus = client
+        const saveRouteStatus = dynamodb
           .put({
             TableName: TABLE_NAME,
             Item: {
-              [PRIMARY_KEY]: 'route',
+              [PARTITION_KEY]: 'route',
               [SORT_KEY]: `status_${rt}`,
               active: false,
               route: rt,
@@ -410,7 +428,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         const { msg } = item
 
         /* log the error to the cloudwatch logs */
-        console.log('Error occurred for route: ' + rt)
+        // console.log('Error occurred for route: ' + rt)
 
         /* wait for the route update to finish saving */
         await saveRouteStatus
@@ -432,9 +450,11 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   // /* get the vehicle ids for every route */
   // const allVehicles = await Promise.all(routes.map(getVehicles))
 
+  let apiPatternCounts = 0
+
   const updatePatterns = async ({ rt, rtnm }: Route) => {
     /* get the current vehicle ids */
-    const { Items: routeLaneDb } = await client
+    const { Items: routeLaneDb } = await dynamodb
       .query(routeLaneParams(rt))
       .promise()
 
@@ -447,6 +467,8 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
         'https://www.fairfaxcounty.gov/bustime/api/v3/getpatterns',
         { params: { ...defaultParams, rt } }
       )
+
+      apiPatternCounts = apiPatternCounts + 1
 
       const routeLaneData = response['bustime-response']
 
@@ -466,7 +488,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
           return [
             ...store,
             {
-              [PRIMARY_KEY]: 'route',
+              [PARTITION_KEY]: 'route',
               [SORT_KEY]: `map_${rt}_${stopType}_${rest.seq}`,
               routeDirection: rtdir,
               stopName: rest.stpnm,
@@ -506,23 +528,31 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     [] as Vehicle[]
   )
 
-  const finalApiCount = apiVehicles.reduce(
-    (total, item) => total + (item?.count! ?? 0),
-    initialApiCount
-  )
+  const finalApiCount =
+    apiPatternCounts +
+    apiVehicles.reduce(
+      (total, item) => total + (item?.count! ?? 0),
+      initialApiCount
+    )
 
   console.log('Final api count', finalApiCount)
 
-  /* log data */
+  const recentApiCountsItem = {
+    [PARTITION_KEY]: 'api_counter',
+    [SORT_KEY]: getNowISO(),
+    calledBy: 'auditor',
+    apiCount: finalApiCount,
+  }
 
-  // console.log('Api Vehicles')
-  // lambdaLog(apiVehicles)
+  const prevApiCountTotal = apiCountTotal?.[0]?.apiCountTotal ?? 0
 
-  // console.log('Flat Vehicles')
-  // lambdaLog(flatVehicles.slice(0, 3))
-
-  // console.log('Vehicle Map Db')
-  // lambdaLog(vehicleMapDb)
+  const totalApiCountsItem = {
+    [PARTITION_KEY]: 'api_counter',
+    [SORT_KEY]: 'total',
+    lastUpdatedBy: 'auditor',
+    lastUpdated: getNowISO(),
+    apiCountTotal: prevApiCountTotal + finalApiCount,
+  }
 
   /**
    * Update the vehicles based on the api result.
@@ -533,12 +563,12 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
    */
   const updatedVehicleItems = flatVehicles.reduce((store, vehicle) => {
     /* Check if the vehicleIds returned from the api call exist in dynamodb */
-    const inVehicleMap = vehicleMapDb[vehicle.vid]
+    const inVehicleMap = vehicleMapDb[vehicle.vehicleId]
 
     /* define a common partition key */
     const partitionKey = {
-      [PRIMARY_KEY]: 'bus',
-      [SORT_KEY]: `status_${vehicle.vid}`,
+      [PARTITION_KEY]: 'bus',
+      [SORT_KEY]: `status_${vehicle.vehicleId}`,
     }
 
     /* create timestamps */
@@ -552,13 +582,10 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
 
     /* if the vehicleId does not exist in dynamodb, */
     if (!inVehicleMap) {
-      /* create a new vehicle entry */
-      const routes = [vehicle.rt]
-
       /* and add it to the `newVehicles` array */
       return [
         ...store,
-        { ...vehicle, ...partitionKey, routes, dateCreated, lastChecked },
+        { ...vehicle, ...partitionKey, dateCreated, lastChecked },
       ]
     }
 
@@ -593,11 +620,11 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
     return [...store, { ...inVehicleMap, ...partitionKey, lastChecked }]
   }, [] as Vehicle[])
 
-  const payload = updatedVehicleItems.map((Item) => ({ PutRequest: { Item } }))
-
-  /* batch write the vehicleIdItems to dynamodb */
-  // console.log('Updated vehicle status')
-  // lambdaLog(updatedVehicleItems)
+  const payload = [
+    ...updatedVehicleItems,
+    recentApiCountsItem,
+    totalApiCountsItem,
+  ].map((Item) => ({ PutRequest: { Item } }))
 
   // /* chunk the the payloads, */
   const requests = chunk(payload, MAX_DYNAMO_REQUESTS)
@@ -618,7 +645,7 @@ export const handler = async (event?: lambda.APIGatewayEvent): Promise<any> => {
   stopwatch.logElapsedSeconds()
 
   // /* define item */
-  // const item = { [PRIMARY_KEY]: 'testing', id: getNowISO() }
+  // const item = { [PARTITION_KEY]: 'testing', id: getNowISO() }
 
   // /* define params */
   // const putParams = { TableName: TABLE_NAME, Item: item }

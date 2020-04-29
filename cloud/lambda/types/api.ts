@@ -5,6 +5,9 @@ export type HttpClientConnectorParams = {
   format?: 'json'
   stpid?: string
   StopID?: string
+  rt_dir?: string
+  dir?: string
+  rt?: string
 }
 
 export type HttpClientOptions = {
@@ -17,6 +20,13 @@ export type HttpClientOptions = {
 
 export type ApiServiceProviderProps = {
   httpClient: typeof axios
+}
+
+export type ConnectorRoute = {
+  rt: string
+  rtnm: string
+  rtclr: string
+  rtdd: string
 }
 
 export type ConnectorPrediction = {
@@ -77,6 +87,36 @@ export type ConnectorApiResponse =
 // export type ConnectorResponse = ConnectorApiJoin | ConnectorApiFailure
 // export type ConnectorResponse = ConnectorPrediction | ConnectorApiFailure
 
+export type ConnectorApiDirection = {
+  directions: { id: string; name: string }[]
+}
+
+export type ConnectorApiStop = {
+  stops: { stpid: string; stpnm: string; lat: number; lon: number }[]
+}
+
+export type ConnectorApiPattern = {
+  ptr: {
+    pid: number
+    ln: number
+    rtdir: string
+    pt: {
+      stpid?: string
+      stpnm?: string
+      typ: 'S' | 'W'
+      seq: number
+      lat: number
+      lon: number
+      pdist: number
+    }[]
+  }[]
+}
+
+export type ConnectorApiRoute = {
+  routes: ConnectorRoute[]
+  error: ConnectorError[]
+}
+
 export type ConnectorApiPrediction = {
   prd: ConnectorPrediction[]
   error: ConnectorError[]
@@ -86,6 +126,9 @@ export type ConnectorApiVehicle = {
   vehicle: ConnectorVehicle[]
   error: ConnectorError[]
 }
+
+export type ConnectorVehicleOrError = ConnectorVehicle | ConnectorError
+export type ConnectorPredictionOrError = ConnectorPrediction | ConnectorError
 
 export type ConnectorApiBase<T> = {
   data: {

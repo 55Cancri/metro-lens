@@ -160,7 +160,7 @@ export class MetroLensStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_12_X,
       timeout: cdk.Duration.seconds(90),
       /* code loaded from dist directory */
-      entry: './lambda/scribe/scribe.ts',
+      entry: './lambda/scribe/scribe-0.ts',
       // code: lambda.Code.fromAsset('lambda/dist'),
       /* file is metro-polling, function is handler */
       handler: 'handler',
@@ -170,9 +170,12 @@ export class MetroLensStack extends cdk.Stack {
       description:
         'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
       environment: {
-        PRIMARY_KEY: 'entity',
         SORT_KEY: 'id',
+        HIST_SORT_KEY: 'archiveTime',
+        PARTITION_KEY: 'entity',
+        HIST_PARTITION_KEY: 'id',
         TABLE_NAME: metrolensTable.tableName,
+        HIST_TABLE_NAME: metrolensHistTable.tableName,
         CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
         WMATA_KEY: process.env.WMATA_KEY!,
       },
@@ -194,7 +197,7 @@ export class MetroLensStack extends cdk.Stack {
       functionName: 'auditor',
       runtime: lambda.Runtime.NODEJS_12_X,
       /* code loaded from dist directory */
-      entry: './lambda/auditor/auditor.ts',
+      entry: './lambda/auditor/auditor-0.ts',
       // code: lambda.Code.fromAsset('lambda/auditor'),
       /* file is auditor.ts, function is handler */
       handler: 'handler',
@@ -204,8 +207,11 @@ export class MetroLensStack extends cdk.Stack {
       description: 'Ensure all vehicle ids are present in the database.',
       environment: {
         SORT_KEY: 'id',
-        PRIMARY_KEY: 'entity',
+        PARTITION_KEY: 'entity',
+        HIST_PARTITION_KEY: 'id',
+        HIST_SORT_KEY: 'archiveTime',
         TABLE_NAME: metrolensTable.tableName,
+        HIST_TABLE_NAME: metrolensHistTable.tableName,
         CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
         WMATA_KEY: process.env.WMATA_KEY!,
       },
@@ -223,9 +229,13 @@ export class MetroLensStack extends cdk.Stack {
       targets: [auditorTarget],
     })
 
-    /* grant the lambda access to the dynamodb table */
+    /* grant the lambdas access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
     metrolensTable.grantReadWriteData(lambdaScribe)
+
+    /* grant the lambdas access to the dynamodb hist table */
+    metrolensHistTable.grantWriteData(lambdaAuditor)
+    metrolensHistTable.grantWriteData(lambdaScribe)
 
     /* create a new topic for lambda errors */
     const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic', {

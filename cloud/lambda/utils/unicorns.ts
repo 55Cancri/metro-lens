@@ -1,14 +1,31 @@
 import chalk from 'chalk'
 import logger from 'winston'
-import * as time from 'date-fns'
+// import * as df from 'date-fns'
+import * as dfz from 'date-fns-timezone'
 
 // @ts-ignore
 import { format as SAFE_format } from 'logform/dist/browser'
 
 const format = SAFE_format as typeof logger.format
 
+export const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes'
+
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
+}
+
 const myFormat = format.printf(({ level, message, label, timestamp }) => {
-  const now = time.format(new Date(timestamp), 'yyyy-MM-dd hh:mm:ssa')
+  const now = dfz.formatToTimeZone(
+    new Date(timestamp),
+    'YYYY-MM-DD hh:mm:ssa',
+    { timeZone: 'America/New_York' }
+  )
   // const stamp = chalk.bold.green(`[${now}m]:`)
   return `[${now}] ${level}: ${JSON.stringify(message, null, 2)}`
 })

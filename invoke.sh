@@ -15,7 +15,16 @@ crossmark='\xE2\x9C\x97'
 bold=$(tput bold)
 
 # define lambda logical id
-lambda=$1
+lambda=''
+# lambda=$1
+
+
+# this gibberish parses arguments
+while [[ "$#" -gt 0 ]]; do case $1 in
+  -s|--scribe) lambda=scribe50AAC574; shift;;
+  -a|--auditor) lambda=auditorFB7F488D;;
+  *) echo "Unknown parameter passed: $1"; exit 1;;
+esac; shift; done
 
 # terminate program if a lambda name was not provided (the argument is empty)
 if test -z "$lambda"
