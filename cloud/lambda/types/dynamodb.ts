@@ -68,6 +68,8 @@ export type PutRequest = { PutRequest: { Item: BusStatusItem } }
 
 export type WriteRequest = aws.DynamoDB.DocumentClient.WriteRequest
 
+export type BatchWriteOutput = aws.DynamoDB.DocumentClient.BatchWriteItemOutput
+
 export type QueryParams = aws.DynamoDB.DocumentClient.QueryInput
 
 export type DynamoServiceProviderProps = {

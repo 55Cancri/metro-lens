@@ -1,5 +1,6 @@
 import aws from 'aws-sdk'
 import util from 'util'
+import * as df from 'date-fns'
 const region = 'us-east-1'
 
 /* use dev nonprod account */
@@ -36,6 +37,10 @@ const run = async (lastKey?: PrimaryKey, prevApiCount = 0): Promise<any> => {
   /* define the exclusive start key */
   const startKey = hasPreviousKey ? { ExclusiveStartKey: lastKey } : {}
 
+  /* define the date range: year-month-date - year-month-(date + 1) */
+  const date1 = df.format(new Date(), 'yyyy-MM-dd')
+  const date2 = df.format(df.addDays(new Date(), 1), 'yyyy-MM-dd')
+
   /* define the params object */
   const Params = {
     TableName,
@@ -43,8 +48,8 @@ const run = async (lastKey?: PrimaryKey, prevApiCount = 0): Promise<any> => {
     ExpressionAttributeNames: { '#pk': 'id', '#sk': 'archiveTime' },
     ExpressionAttributeValues: {
       ':pk': 'api_count_history',
-      ':date1': '2020-04-28',
-      ':date2': '2020-04-29',
+      ':date1': date1,
+      ':date2': date2,
     },
     ...startKey,
   }

@@ -239,6 +239,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       dynamoService.generateItem({
         pk: 'stop',
         sk: `route_id_${routeId}`,
+        dateCreated: dateService.getNowInISO(),
         stops,
       }),
     ],
@@ -247,7 +248,12 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
   /* create the items for the maps */
   const mapItems = patterns.map(({ key, map }) =>
-    dynamoService.generateItem({ pk: 'route', sk: key, map })
+    dynamoService.generateItem({
+      pk: 'route',
+      sk: key,
+      dateCreated: dateService.getNowInISO(),
+      map,
+    })
   )
 
   /* define a dynamo item for the buses that have come back online */
@@ -295,20 +301,43 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   )
 
   try {
-    winston.info('Saving prediction updates')
+    winston.info('1/2: Saving prediction updates')
 
     /* kick off the single writes to dynamodb for bus predictions and api count */
     const singleWrites = await Promise.all([
-      dynamoService.write(totalApiCountItem),
+      dynamoService.write(totalApiCountItem).then(() => console.log("First save complete.")),
       dynamoService.write(recentApiCountItem, { history: true }),
       dynamoService.write(updatedActiveVehiclesItem),
     ])
     winston.info('Finished saving prediction updates.')
-    winston.info('Saving stops and maps: ' + chunkedItemRequests.length)
+
+    winston.info(
+      'Expecting ' +
+        stopItems.length +
+        ' stop items and ' +
+        mapItems.length +
+        ' map items.'
+    )
+
+    winston.info('2/2: Saving stops and maps: ' + chunkedItemRequests.length)
 
     /* kick off the batch writes to dynamodb for stops and map items */
-    const batchWrites = await Promise.all(
-      chunkedItemRequests.map(dynamoService.batchWrite)
+    // const batchWrites = await Promise.all(
+    //   chunkedItemRequests.map(dynamoService.batchWrite)
+    // )
+    const batchWrites = await chunkedItemRequests.reduce(
+      async (store, items, i) => {
+        await store
+        winston.info(
+          'Finished saving ' +
+            Number(i + 1) +
+            ' batch of ' +
+            items.length +
+            ' items.'
+        )
+        return dynamoService.batchWrite(items)
+      },
+      Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>
     )
 
     winston.info('Finished saving stops and maps.')

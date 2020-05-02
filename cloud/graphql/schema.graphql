@@ -1,14 +1,13 @@
-type User {
-  id: String
-  name: String
+schema {
+  query: Query
+}
+
+type AppUser {
+  userId: String
+  fullName: String
 }
 
 type Query {
-  getUsers: [User]
-  getUser(id: String): User
+  getUser(id: ID!): AppUser
+  getUsers: [AppUser]
 }
-
-# type Mutation {
-#   addUser(user: User!): User
-#   removeUser(id: String!): User
-# }

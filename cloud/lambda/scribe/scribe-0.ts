@@ -27,10 +27,6 @@ import * as Api from '../types/api'
 aws.config.update({ region: 'us-east-1' })
 
 /* initialize the environment variables */
-// const TABLE_NAME = process.env.TABLE_NAME || ''
-// const HIST_TABLE_NAME = process.env.HIST_TABLE_NAME || ''
-// const PARTITION_KEY = process.env.PARTITION_KEY || ''
-// const SORT_KEY = process.env.SORT_KEY || ''
 const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
 const MAX_DYNAMO_REQUESTS = 25
 
@@ -98,7 +94,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     ['api set ' + i + 1]: listOfVehicleIds.join(','),
   }))
 
-  winston.info('The following vehicles will be updated: ' + vehiclesToBeUpdated)
+  winston.info(
+    'The following vehicles will be updated: ' +
+      JSON.stringify(vehiclesToBeUpdated)
+  )
 
   /* create an array of the api parameter objects for the api calls */
   const batchedVehicleIds: Api.HttpClientConnectorParams[] = chunkedVehicleIds.map(

@@ -86,59 +86,6 @@ export class MetroLensStack extends cdk.Stack {
       }
     )
 
-    /* create appsync to interface with lambdas and dynamodb */
-    const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
-      name: 'metrolens-graphql-api',
-      logConfig: {
-        /* log every resolver */
-        fieldLogLevel: appsync.FieldLogLevel.ALL,
-      },
-
-      // authorizationConfig: {
-      //   defaultAuthorization: {
-      //     // TODO: add another field
-      //     // userPool,
-      //     defaultAction: appsync.UserPoolDefaultAction.ALLOW
-      //   },
-      //   additionalAuthorizationModes: [
-      //     {
-      //       apiKeyDesc: 'My API Key'
-      //     }
-      //   ]
-      // },
-      schemaDefinitionFile: props?.schemaDirectory,
-    })
-
-    /* appsync: create lambda */
-    const appsyncLambda = new lambda.Function(this, 'appsyncTestLambda', {
-      code: lambda.Code.fromInline(
-        'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
-      ),
-      runtime: lambda.Runtime.NODEJS_12_X,
-      handler: 'index.handler',
-    })
-
-    /* appsync: add lambda */
-    const lambdaDataSource = graphql.addLambdaDataSource(
-      'appsyncLambda',
-      'Lambda triggered by appsync',
-      appsyncLambda
-    )
-
-    lambdaDataSource.createResolver({
-      typeName: 'Query',
-      fieldName: 'getUsers',
-      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
-    })
-
-    lambdaDataSource.createResolver({
-      typeName: 'Query',
-      fieldName: 'getUser',
-      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
-    })
-
     const layer = new lambda.LayerVersion(this, 'CommonLayer', {
       /**
        * lambda.Code.fromAsset(path) specifies a directory or a .zip
@@ -152,6 +99,100 @@ export class MetroLensStack extends cdk.Stack {
       compatibleRuntimes: [lambda.Runtime.NODEJS_12_X],
       description: 'Layer for Metro Lens lambdas.',
     })
+
+    /* -------------------------------------------------------------------------- */
+    /*                                   GraphQl                                  */
+    /* -------------------------------------------------------------------------- */
+
+    /* create appsync to interface with lambdas and dynamodb */
+    const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
+      name: 'metrolens-graphql-api',
+      logConfig: {
+        /* log every resolver */
+        fieldLogLevel: appsync.FieldLogLevel.ALL,
+      },
+      authorizationConfig: {
+        defaultAuthorization: {
+          // TODO: add another field
+          // userPool,
+          defaultAction: appsync.UserPoolDefaultAction.ALLOW,
+        },
+        // additionalAuthorizationModes: [{ apiKeyDesc: 'My API Key' }],
+      },
+      schemaDefinitionFile: props?.schemaDirectory,
+    })
+
+    /* appsync: create lambda */
+    // const appsyncLambda = new lambda.Function(this, 'appsyncTestLambda', {
+    //   code: lambda.Code.fromInline(
+    //     'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
+    //   ),
+    //   runtime: lambda.Runtime.NODEJS_12_X,
+    //   handler: 'index.handler',
+    // })
+
+    // /* appsync lambda to register user */
+    // const lambdaRegister = new nodejs.NodejsFunction(this, 'register', {
+    //   functionName: 'register',
+    //   runtime: lambda.Runtime.NODEJS_12_X,
+    //   timeout: cdk.Duration.seconds(10),
+    //   entry: './lambda/register/register-0.ts',
+    //   handler: 'handler',
+    //   layers: [layer],
+    //   description: 'Register a user.',
+    // })
+
+    /* appsync lambda to login user */
+    const lambdaLogin = new nodejs.NodejsFunction(this, 'login', {
+      functionName: 'login',
+      runtime: lambda.Runtime.NODEJS_12_X,
+      timeout: cdk.Duration.seconds(10),
+      entry: './lambda/login/login-0.ts',
+      handler: 'handler',
+      layers: [layer],
+      description: 'Login a user.',
+    })
+
+    // /* appsync: add lambda as a data source */
+    // const lambdaRegisterDataSource = graphql.addLambdaDataSource(
+    //   'lambdaRegister',
+    //   'Register lambda triggered by appsync',
+    //   lambdaRegister
+    // )
+
+    // /* appsync: create a resolver for the data source */
+    // lambdaRegisterDataSource.createResolver({
+    //   typeName: 'Mutation',
+    //   fieldName: 'addUser',
+    //   requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+    //   responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    // })
+
+    // /* appsync: add lambda as a data source */
+    const lambdaLoginDataSource = graphql.addLambdaDataSource(
+      'lambdaLogin',
+      'Login lambda triggered by appsync',
+      lambdaLogin
+    )
+
+    // /* appsync: create a resolver for the data source */
+    // lambdaLoginDataSource.createResolver({
+    //   typeName: 'Query',
+    //   fieldName: 'getUsers',
+    //   requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+    //   responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    // })
+
+    lambdaLoginDataSource.createResolver({
+      typeName: 'Query',
+      fieldName: 'getUser',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    /* -------------------------------------------------------------------------- */
+    /*                               General lambdas                              */
+    /* -------------------------------------------------------------------------- */
 
     /* create lambda to make api bus calls every minute */
     // const lambdaScribe = new lambda.Function(this, 'scribe', {

@@ -274,7 +274,7 @@ export const dynamoServiceProvider = ({
     const params = { RequestItems: { [TABLE_NAME]: requests } }
 
     /* call the batch write to save the items to the table */
-    return dynamodb.batchWrite(params).promise()
+    return dynamodb.batchWrite(params).promise() as Dynamo.BatchWriteOutput
   }
 
   const generateItem = (
