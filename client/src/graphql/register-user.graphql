@@ -1,0 +1,16 @@
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+mutation registerUser($input: RegisterInput!) {
+  results: registerUser(input: $input) {
+    accessToken
+    user {
+      id
+      email
+      username
+    }
+  }
+}

@@ -1,0 +1,15 @@
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+mutation loginUser($input: LoginInput!) {
+  results: loginUser(input: $input) {
+    accessToken
+    user {
+      id
+      email
+      username
+    }
+  }
+}

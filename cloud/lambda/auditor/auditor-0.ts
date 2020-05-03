@@ -2,6 +2,7 @@
 import * as aws from 'aws-sdk'
 import * as lambda from 'aws-lambda'
 import axios from 'axios'
+import { promises as fs } from 'fs'
 
 /* import services */
 import { apiServiceProvider } from '../services/api'
@@ -23,9 +24,6 @@ import * as Api from '../types/api'
 aws.config.update({ region: 'us-east-1' })
 
 /* initialize the environment variables */
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const PARTITION_KEY = process.env.PARTITION_KEY || ''
-const SORT_KEY = process.env.SORT_KEY || ''
 const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
 const MAX_DYNAMO_REQUESTS = 25
 
@@ -38,7 +36,7 @@ const dynamodb = new aws.DynamoDB.DocumentClient()
 
 /* define the handler */
 export const handler = async (event?: lambda.APIGatewayEvent) => {
-  winston.info('Start.')
+  winston.info('Starting.')
 
   /* initialize services */
   // !NOTE: do not instantiate these here.
@@ -85,7 +83,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const stopPromise = dynamoService.getStops()
 
   /* get the map saved to dynamodb */
-  const mapPromise = dynamoService.getMap()
+  const mapPromise = dynamoService.getMaps()
 
   /* get the total number of api calls saved to dynamodb */
   const prevApiCountPromise = dynamoService.getApiCountTotal()
@@ -256,6 +254,35 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     })
   )
 
+  const stopSet = stops.reduce(
+    (store, stop) => {
+      const hasStop = store.some(
+        (item) => item.stopId === stop.stopId && item.stopName === stop.stopName
+      )
+
+      if (hasStop) {
+        return store
+      }
+
+      return [...store, stop]
+    },
+    [] as {
+      routeId: string
+      stopName: string
+      stopId: string
+      lat: number
+      lon: number
+    }[]
+  )
+
+  /* define a dynamo item that includes an array of all the stops */
+  const stopSearchItem = dynamoService.generateItem({
+    pk: 'stop',
+    sk: 'search',
+    dateCreated: dateService.getNowInISO(),
+    stops: stopSet,
+  })
+
   /* define a dynamo item for the buses that have come back online */
   const updatedActiveVehiclesItem = dynamoService.generateItem({
     pk: 'bus',
@@ -283,70 +310,51 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     apiCountTotal,
   })
 
-  // winston.info({ recentApiCountItem })
-  // winston.info({ totalApiCountItem })
-
   /* -------------------------------------------------------------------------- */
   /*                           Save items to DynamoDb                           */
   /* -------------------------------------------------------------------------- */
 
-  /* if there are stops that need to be populated */
-  /* chunk the stop items into arrays of 25 items */
-  const chunkedItemRequests = arrayUtils.chunk(
-    [
-      ...stopItems.map(dynamoService.toPutRequest),
-      ...mapItems.map(dynamoService.toPutRequest),
-    ] as Dynamo.WriteRequest[],
-    MAX_DYNAMO_REQUESTS
-  )
-
   try {
-    winston.info('1/2: Saving prediction updates')
-
     /* kick off the single writes to dynamodb for bus predictions and api count */
-    const singleWrites = await Promise.all([
-      dynamoService.write(totalApiCountItem).then(() => console.log("First save complete.")),
+    const singleWrites = Promise.all([
+      /* total api count */
+      dynamoService.write(totalApiCountItem),
+      /* recent api count */
       dynamoService.write(recentApiCountItem, { history: true }),
+      /* map of online bus predictions */
       dynamoService.write(updatedActiveVehiclesItem),
     ])
-    winston.info('Finished saving prediction updates.')
 
-    winston.info(
-      'Expecting ' +
-        stopItems.length +
-        ' stop items and ' +
-        mapItems.length +
-        ' map items.'
-    )
+    /* the only single upload that needs to be conditional or it will overwrite */
+    /* array of 4000+ stops */
+    const searchStopWrite =
+      stopSet.length > 0 && dynamoService.write(stopSearchItem)
 
-    winston.info('2/2: Saving stops and maps: ' + chunkedItemRequests.length)
-
-    /* kick off the batch writes to dynamodb for stops and map items */
-    // const batchWrites = await Promise.all(
-    //   chunkedItemRequests.map(dynamoService.batchWrite)
-    // )
-    const batchWrites = await chunkedItemRequests.reduce(
-      async (store, items, i) => {
+    /* batch write the stops grouped by route id */
+    const batchStopWrites = arrayUtils
+      .chunk(stopItems.map(dynamoService.toPutRequest), MAX_DYNAMO_REQUESTS)
+      .reduce(async (store, items, i) => {
         await store
-        winston.info(
-          'Finished saving ' +
-            Number(i + 1) +
-            ' batch of ' +
-            items.length +
-            ' items.'
-        )
         return dynamoService.batchWrite(items)
-      },
-      Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>
-    )
+      }, Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>)
 
-    winston.info('Finished saving stops and maps.')
+    /* batch write the maps by route id */
+    const batchMapWrites = arrayUtils
+      .chunk(mapItems.map(dynamoService.toPutRequest), MAX_DYNAMO_REQUESTS)
+      .reduce(async (store, items, i) => {
+        await store
+        return dynamoService.batchWrite(items)
+      }, Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>)
 
+    /* wait for all pending writes to finish */
+    await batchStopWrites
+    await batchMapWrites
     await singleWrites
-    await batchWrites
+    await searchStopWrite
   } catch (error) {
     winston.error(error)
   }
 
+  /* log completion */
   winston.info('Done.')
 }

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "date-fns": "^2.12.0",
+    "graphql": "^15.0.0",
     "husky": "^4.2.5",
     "performance-now": "^2.1.0"
   },

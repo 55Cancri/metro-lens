@@ -39,7 +39,7 @@ const dynamodb = new aws.DynamoDB.DocumentClient()
 
 /* define the handler */
 export const handler = async (event?: lambda.APIGatewayEvent) => {
-  winston.info('Start.')
+  winston.info('Starting.')
 
   /* initialize services */
   // !NOTE: do not instantiate these here.

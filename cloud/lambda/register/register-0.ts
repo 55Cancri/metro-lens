@@ -1,6 +1,6 @@
 /* login-0 is always the most recent version */
 import * as aws from 'aws-sdk'
-import * as lambda from 'aws-lambda'
+import * as Misc from '../types/misc'
 // import * as R from 'ramda'
 // import * as Rx from 'rxjs'
 // import * as Op from 'rxjs/operators'
@@ -34,12 +34,24 @@ const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb err
 /* setup dynamodb client */
 const dynamodb = new aws.DynamoDB.DocumentClient()
 
+type Input = {
+  username: string
+  email: string
+  password: string
+}
+
 /* define the handler */
-export const handler = async (event?: lambda.APIGatewayEvent) => {
+export const handler = async (event?: Misc.AppsyncEvent<Input>) => {
   winston.info('Start register.')
 
-  winston.info('Received event:')
-  winston.info({ event })
+  if (event) {
+    const dateService = dateServiceProvider()
+    const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
+
+    dynamoService
+
+    const { username, email, password } = event.arguments.input
+  }
 
   return { userId: 1, fullName: 'Jarvis' }
 }

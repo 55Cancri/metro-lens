@@ -1,0 +1,76 @@
+overwrite: true
+schema: ./graphql/schema.graphql
+# for your queries/mutations/fragments/subscriptions, and not for schemas
+documents: ../client/src/graphql/*.graphql
+# to help with the 'cannot use modules outside..' issue.
+noRequire: true
+generates:
+  # server location for schema type definitions
+  # ./types/gen-types.d.ts:
+  #   hooks:
+  #     # applies prettier immediately after file update
+  #     afterOneFileWrite:
+  #       - prettier --write
+  #   plugins:
+  #     # add this line to the top of the generated file
+  #     # context must be renamed to something that is not Context
+  #     # https://graphql-code-generator.com/docs/plugins/add
+  #     - add: "import { Context as MyContext } from '@context'"
+  #     - typescript
+  #     - typescript-resolvers
+  #   config:
+  #     # use in addition to the add plugin. Look for a type called
+  #     # MyContext and use as the Context type.
+  #     contextType: MyContext
+  #     noExport: true
+  #     # useIndexSignature: true
+  #     avoidOptionals: true
+  #     # if you want to have all your types be wrapped in Partial<T> by default
+  #     defaultMapper: Partial<{T}>
+  #     # enumsAsTypes: true
+  #     # declarationKind: "interface"
+  #     # defaultMapper: any
+  #     # globalNamespace: true
+  #     # namePrefix: gql
+  #     # noNamespaces: true
+  # client location for schema type definitions
+  ../client/src/types/apollo-hooks.tsx:
+    hooks:
+      # applies prettier immediately after file update
+      afterOneFileWrite:
+        - prettier --write
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-react-apollo
+    config:
+      withHOC: false
+      withComponent: false
+      withMutationFn: false
+      noComponent: true
+      withHooks: true
+      # change the value of maybe from T | null to just T
+      maybeValue: T
+
+      # resolve the primitive types
+      # preResolveTypes: true
+
+      # avoid using `?` while generating
+      # avoidOptionals: true
+      # withResultType: false
+      # useIndexSignature: true
+      hooksImportFrom: '@apollo/react-hooks'
+      # skipTypename: true
+      # flattenGeneratedTypes: true
+      # declarationKind: "interface"
+  ../client/src/graphql/server-schema.graphql:
+    plugins:
+      - schema-ast
+# config:
+#   scalars:
+#     Grade: string
+#     CalculatorAdmin: string
+#     OrgIdEventId: string
+# require:
+#   - ts-node/register/transpile-only
+#   - tsconfig-paths/register

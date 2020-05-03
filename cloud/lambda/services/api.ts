@@ -1,5 +1,4 @@
 import * as Api from '../types/api'
-import * as Generic from '../types/general'
 import { winston } from '../utils/unicorns'
 import * as arrayUtils from '../utils/arrays'
 
@@ -156,6 +155,7 @@ export const apiServiceProvider = ({
     params: Api.HttpClientConnectorParams,
     routes: Api.ConnectorRoute[]
   ) => {
+    console.log('All routes:')
     const patternPromise = routes.map(async ({ rt }) => {
       type Pattern = {
         stopId?: string
@@ -180,6 +180,15 @@ export const apiServiceProvider = ({
       const { ptr } = data['bustime-response'] as Api.ConnectorApiPattern
 
       const mapList = ptr.reduce((store, { pt, rtdir }) => {
+        const key = `map_${rt}_${rtdir}`
+
+        const duplicateKey = store.some((item) => item.key === key)
+
+        if (duplicateKey) {
+          /* some route are backwards and forwards with same stops */
+          return store
+        }
+
         const routeMap = pt.map(({ typ, lat, lon, seq, stpid, stpnm }) => ({
           lat,
           lon,
@@ -190,7 +199,7 @@ export const apiServiceProvider = ({
           ...(stpid ? { stopId: stpid } : {}),
         }))
 
-        const item = { key: `map_${rt}_${rtdir}`, map: routeMap }
+        const item = { key, map: routeMap }
 
         return [...store, item]
       }, [] as { key: string; map: Pattern[] }[])

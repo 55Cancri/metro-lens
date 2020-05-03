@@ -18,11 +18,13 @@ bold=$(tput bold)
 lambda=''
 # lambda=$1
 
+scribeLambda=scribe50AAC574
+auditorLambda=auditorFB7F488D
 
 # this gibberish parses arguments
 while [[ "$#" -gt 0 ]]; do case $1 in
-  -s|--scribe) lambda=scribe50AAC574; shift;;
-  -a|--auditor) lambda=auditorFB7F488D;;
+  -s|--scribe) lambda=$scribeLambda; shift;;
+  -a|--auditor) lambda=$auditorLambda;;
   *) echo "Unknown parameter passed: $1"; exit 1;;
 esac; shift; done
 
@@ -84,5 +86,5 @@ sleep 1
 #   sam local invoke, this file needs to be there. If it is at root level where the script
 #   itself is, or nested deeper in the lambda folder, the command will fail silently.
 #   You will see: Usage: sam local invoke [OPTIONS] [FUNCTION_IDENTIFIER].
-sam local invoke $lambda --env-vars .env.json --no-event --profile default
+sam local invoke $lambda --env-vars .env-for-invoke.json --no-event --profile default
 echo -e "\r\033[1A\033[0K${green}${bold}${checkmark} Finished invoking lambda $lambda.${reset}"

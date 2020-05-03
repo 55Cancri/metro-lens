@@ -1,6 +1,8 @@
+// @ts-nocheck
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useRegisterUserMutation } from '../types/apollo-hooks'
 
 const pageVariants = {
   initial: { scale: 0.9, opacity: 0 },
@@ -15,11 +17,23 @@ const pageVariants = {
 export const RegisterPage: React.FC = () => {
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [email, setEmail] = React.useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [registerUserMutation, { data }] = useRegisterUserMutation()
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    console.log(`Sending with username: ${username} password: ${password}`)
+    console.log(
+      `Sending with username: ${username}, email: ${email}, password: ${password}.`
+    )
+
+    // make graphql api call
+    const { data: response } = await registerUserMutation({
+      variables: { input: { email, password, username } },
+    })
+
+    console.log({ mutationResponse: response })
   }
 
   return (
@@ -39,6 +53,17 @@ export const RegisterPage: React.FC = () => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.currentTarget.value)}
+            />
+          </label>
+        </div>
+        <div>
+          <label htmlFor="email">
+            Email
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.currentTarget.value)}
             />
           </label>
         </div>

@@ -28,6 +28,21 @@ export const dynamoServiceProvider = ({
   dynamodb,
   dateService,
 }: Dynamo.DynamoServiceProviderProps) => {
+  const findUser = async (username: string) => {
+    const params = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: '#pk = :pk AND #sk = :sk',
+      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
+      ExpressionAttributeValues: { ':pk': 'user', ':sk': 'status' },
+    }
+
+    const { Items } = await dynamodb.query(params).promise()
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                         Auditor and Scribe lambdas                         */
+  /* -------------------------------------------------------------------------- */
+
   const getStatusOfBuses = async () => {
     const params = {
       TableName: TABLE_NAME,
@@ -76,11 +91,12 @@ export const dynamoServiceProvider = ({
   }
 
   const getStops = async () => {
+    /* the stops are grouped by route id */
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk = :sk',
+      KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
       ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'stop', ':sk': 'search' },
+      ExpressionAttributeValues: { ':pk': 'stop', ':skv': 'route_id_' },
     }
 
     type Stop = {
@@ -110,12 +126,12 @@ export const dynamoServiceProvider = ({
     return { stops, dbStopsApiCount: 0 }
   }
 
-  const getMap = async () => {
+  const getMaps = async () => {
     const params = {
       TableName: TABLE_NAME,
       KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
       ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'stop', ':skv': 'map_' },
+      ExpressionAttributeValues: { ':pk': 'route', ':skv': 'map_' },
     }
 
     type Map = {
@@ -142,6 +158,12 @@ export const dynamoServiceProvider = ({
 
     /* get the map */
     const map = Item?.map ?? []
+
+    console.log('Map dynamodb - Items:')
+    console.log(Items?.length ?? 0)
+
+    console.log('Map dynamodb - .map:')
+    console.log(map?.length ?? 0)
 
     /* return the expected results */
     return { map, dbMapApiCount: 0 }
@@ -303,7 +325,7 @@ export const dynamoServiceProvider = ({
   })
 
   return {
-    getMap,
+    getMaps,
     getStops,
     getBusPredictions,
     getStatusOfBuses,

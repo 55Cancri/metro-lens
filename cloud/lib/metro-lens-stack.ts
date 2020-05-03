@@ -73,6 +73,11 @@ export class MetroLensStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
+    metrolensTable.addLocalSecondaryIndex({
+      indexName: 'username',
+      sortKey: 'username',
+    })
+
     /* create dynamodb history table */
     const metrolensHistTable = new dynamodb.Table(
       this,
@@ -111,14 +116,14 @@ export class MetroLensStack extends cdk.Stack {
         /* log every resolver */
         fieldLogLevel: appsync.FieldLogLevel.ALL,
       },
-      authorizationConfig: {
-        defaultAuthorization: {
-          // TODO: add another field
-          // userPool,
-          defaultAction: appsync.UserPoolDefaultAction.ALLOW,
-        },
-        // additionalAuthorizationModes: [{ apiKeyDesc: 'My API Key' }],
-      },
+      // authorizationConfig: {
+      //   defaultAuthorization: {
+      //     // TODO: add another field
+      //     // userPool,
+      //     defaultAction: appsync.UserPoolDefaultAction.ALLOW,
+      //   },
+      //   // additionalAuthorizationModes: [{ apiKeyDesc: 'My API Key' }],
+      // },
       schemaDefinitionFile: props?.schemaDirectory,
     })
 
@@ -131,16 +136,16 @@ export class MetroLensStack extends cdk.Stack {
     //   handler: 'index.handler',
     // })
 
-    // /* appsync lambda to register user */
-    // const lambdaRegister = new nodejs.NodejsFunction(this, 'register', {
-    //   functionName: 'register',
-    //   runtime: lambda.Runtime.NODEJS_12_X,
-    //   timeout: cdk.Duration.seconds(10),
-    //   entry: './lambda/register/register-0.ts',
-    //   handler: 'handler',
-    //   layers: [layer],
-    //   description: 'Register a user.',
-    // })
+    /* appsync lambda to register user */
+    const lambdaRegister = new nodejs.NodejsFunction(this, 'register', {
+      functionName: 'register',
+      runtime: lambda.Runtime.NODEJS_12_X,
+      timeout: cdk.Duration.seconds(10),
+      entry: './lambda/register/register-0.ts',
+      handler: 'handler',
+      layers: [layer],
+      description: 'Register a user.',
+    })
 
     /* appsync lambda to login user */
     const lambdaLogin = new nodejs.NodejsFunction(this, 'login', {
@@ -153,20 +158,20 @@ export class MetroLensStack extends cdk.Stack {
       description: 'Login a user.',
     })
 
-    // /* appsync: add lambda as a data source */
-    // const lambdaRegisterDataSource = graphql.addLambdaDataSource(
-    //   'lambdaRegister',
-    //   'Register lambda triggered by appsync',
-    //   lambdaRegister
-    // )
+    /* appsync: add lambda as a data source */
+    const lambdaRegisterDataSource = graphql.addLambdaDataSource(
+      'lambdaRegister',
+      'Register lambda triggered by appsync',
+      lambdaRegister
+    )
 
-    // /* appsync: create a resolver for the data source */
-    // lambdaRegisterDataSource.createResolver({
-    //   typeName: 'Mutation',
-    //   fieldName: 'addUser',
-    //   requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-    //   responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
-    // })
+    /* appsync: create a resolver for the data source */
+    lambdaRegisterDataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'registerUser',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
 
     // /* appsync: add lambda as a data source */
     const lambdaLoginDataSource = graphql.addLambdaDataSource(
@@ -175,17 +180,17 @@ export class MetroLensStack extends cdk.Stack {
       lambdaLogin
     )
 
-    // /* appsync: create a resolver for the data source */
-    // lambdaLoginDataSource.createResolver({
-    //   typeName: 'Query',
-    //   fieldName: 'getUsers',
-    //   requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
-    //   responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
-    // })
-
+    /* appsync: create a resolver for the data source */
     lambdaLoginDataSource.createResolver({
       typeName: 'Query',
-      fieldName: 'getUser',
+      fieldName: 'getUsers',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    lambdaLoginDataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'loginUser',
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
