@@ -74,8 +74,8 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     metrolensTable.addLocalSecondaryIndex({
-      indexName: 'username',
-      sortKey: 'username',
+      indexName: 'usernameIndex',
+      sortKey: { name: 'username', type: dynamodb.AttributeType.STRING },
     })
 
     /* create dynamodb history table */
