@@ -8,6 +8,10 @@ import { format as SAFE_format } from 'logform/dist/browser'
 
 const format = SAFE_format as typeof logger.format
 
+// sleep for x milliseconds
+export const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
+
 export const formatBytes = (bytes: number, decimals = 2) => {
   if (bytes === 0) return '0 Bytes'
 

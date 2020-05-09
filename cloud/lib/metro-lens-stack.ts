@@ -46,7 +46,7 @@ export class MetroLensStack extends cdk.Stack {
     const s3Source = s3Deployment.Source.asset(props?.uiDirectory!)
 
     /* define the bucket name */
-    const bucketName = props?.resourcePrefix + '-client'
+    const bucketName = `${props?.resourcePrefix}-client`
 
     /* create the s3 bucket */
     const bucket = this.createBucket(bucketName)
@@ -73,6 +73,7 @@ export class MetroLensStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
+    /* allow query by email and username on login and register */
     metrolensTable.addLocalSecondaryIndex({
       indexName: 'usernameIndex',
       sortKey: { name: 'username', type: dynamodb.AttributeType.STRING },
@@ -145,6 +146,16 @@ export class MetroLensStack extends cdk.Stack {
       handler: 'handler',
       layers: [layer],
       description: 'Register a user.',
+      environment: {
+        SORT_KEY: 'id',
+        HIST_SORT_KEY: 'archiveTime',
+        PARTITION_KEY: 'entity',
+        HIST_PARTITION_KEY: 'id',
+        USERNAME_SORT_KEY: 'username',
+        TABLE_NAME: metrolensTable.tableName,
+        HIST_TABLE_NAME: metrolensHistTable.tableName,
+        JWT_SECRET: String(process.env.JWT_SECRET),
+      },
     })
 
     /* appsync lambda to login user */
@@ -156,6 +167,16 @@ export class MetroLensStack extends cdk.Stack {
       handler: 'handler',
       layers: [layer],
       description: 'Login a user.',
+      environment: {
+        SORT_KEY: 'id',
+        PARTITION_KEY: 'entity',
+        HIST_SORT_KEY: 'archiveTime',
+        HIST_PARTITION_KEY: 'id',
+        USERNAME_SORT_KEY: 'username',
+        TABLE_NAME: metrolensTable.tableName,
+        HIST_TABLE_NAME: metrolensHistTable.tableName,
+        JWT_SECRET: String(process.env.JWT_SECRET),
+      },
     })
 
     /* appsync: add lambda as a data source */
@@ -222,8 +243,8 @@ export class MetroLensStack extends cdk.Stack {
         HIST_PARTITION_KEY: 'id',
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
-        CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
-        WMATA_KEY: process.env.WMATA_KEY!,
+        CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
+        WMATA_KEY: String(process.env.WMATA_KEY),
       },
     })
 
@@ -258,8 +279,8 @@ export class MetroLensStack extends cdk.Stack {
         HIST_SORT_KEY: 'archiveTime',
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
-        CONNECTOR_KEY: process.env.CONNECTOR_KEY!,
-        WMATA_KEY: process.env.WMATA_KEY!,
+        CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
+        WMATA_KEY: String(process.env.WMATA_KEY),
       },
     })
 
@@ -274,6 +295,10 @@ export class MetroLensStack extends cdk.Stack {
       /* attach the lambda to the schedule */
       targets: [auditorTarget],
     })
+
+    /* grant the appsync lambdas access to the dynamodb table */
+    metrolensTable.grantReadWriteData(lambdaRegister)
+    metrolensTable.grantReadWriteData(lambdaLogin)
 
     /* grant the lambdas access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
@@ -458,7 +483,7 @@ export class MetroLensStack extends cdk.Stack {
     const { aliasRecordName, certificateArn } = props
 
     /* define an array of the domain names */
-    const domainNames = [aliasRecordName, 'www.' + aliasRecordName]
+    const domainNames = [aliasRecordName, `www.${aliasRecordName}`]
 
     /* create an OAI user */
     const oaiUser = this.helpers.cloudfront.getOriginIdentityAccessUser()

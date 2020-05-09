@@ -8,18 +8,18 @@ export const getEnvironmentVariables = () => {
   /* single source of truth for types and test prop values */
   return {
     appName,
-    email: process.env.EMAIL!,
+    email: String(process.env.EMAIL),
     uiDirectory: UI_DIRECTORY,
     schemaDirectory: SCHEMA_DIRECTORY,
-    environmentName: process.env.ENV_NAME!,
-    resourcePrefix: `${process.env.ENV_NAME!}-${appName}`,
-    certificateArn: process.env.ACM_CERTIFICATE_ARN!,
-    hostedZoneId: process.env.HOSTED_ZONE_ID!,
-    hostedZoneName: process.env.HOSTED_ZONE_NAME!,
-    aliasRecordName: process.env.DOMAIN_ALIAS_NAME!,
+    environmentName: String(process.env.ENV_NAME),
+    resourcePrefix: `${String(process.env.ENV_NAME)}-${appName}`,
+    certificateArn: String(process.env.ACM_CERTIFICATE_ARN),
+    hostedZoneId: String(process.env.HOSTED_ZONE_ID),
+    hostedZoneName: String(process.env.HOSTED_ZONE_NAME),
+    aliasRecordName: String(process.env.DOMAIN_ALIAS_NAME),
     env: {
-      account: process.env.CDK_DEFAULT_ACCOUNT!,
-      region: process.env.CDK_DEFAULT_REGION!,
+      account: String(process.env.CDK_DEFAULT_ACCOUNT),
+      region: String(process.env.CDK_DEFAULT_REGION),
     },
   }
 }

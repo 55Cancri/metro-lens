@@ -1,0 +1,106 @@
+# necessary if this .eslintrc file is nested in the project
+root: true
+
+# parser: babel-eslint
+parser: '@typescript-eslint/parser'
+
+parserOptions:
+  sourceType: module
+  project: tsconfig.json
+  ecmaVersion: 2020
+  ecmaFeatures:
+    jsx: true
+
+# settings:
+#   import/parsers:
+#     '@typescript-eslint/parser': [.ts, .tsx]
+#   import/resolver:
+#     typescript: {}
+
+extends:
+  # not all ESLint core rules are compatible with TypeScript, so you need to add both eslint:recommended and plugin:@typescript-eslint/eslint-recommended (which will adjust the one from ESLint appropriately for TypeScript) to your config
+  # - plugin:@typescript-eslint
+  - plugin:@typescript-eslint/eslint-recommended
+  - plugin:@typescript-eslint
+  - plugin:react/recommended
+  - plugin:jest/recommended
+  - airbnb
+  - prettier
+
+plugins:
+  - '@typescript-eslint'
+  - import
+  - jest
+  - prettier
+
+env:
+  es6: true
+  browser: true
+  node: true
+  jest: true
+  jest/globals: true
+
+rules:
+  ### Different from airbnb config
+
+  ### Styling ###
+
+  # Prefer new line before return
+  # http://eslint.org/docs/rules/newline-before-return
+  newline-before-return: error # airbnb default: off
+
+  ### Variables ###
+
+  # Functions and classes can be used before declaration
+  # http://eslint.org/docs/rules/no-use-before-define
+  no-use-before-define: # airbnb default: ['error', { functions: true, classes: true, variables: true }]
+    - error
+    - functions: false
+      classes: false
+      variables: true
+
+  ### From error to warning ###
+  # nothing with unused vars
+  no-unused-vars: 0
+
+  # handled by eslint
+  '@typescript-eslint/no-unused-vars': off
+
+  # stupid rule
+  '@typescript-eslint/explicit-function-return-type': off
+
+  # no semi colons
+  '@typescript-eslint/member-delimiter-style': off
+
+  import/extensions: off
+  import/no-unresolved: off
+
+  ### ES6 ###
+
+  ### Best practices ###
+  # require or disallow Yoda conditions
+  # https://eslint.org/docs/rules/yoda
+  yoda: [error, never, { exceptRange: true }] # airbnb default: 'error'
+
+  # add curly braces all the time
+  # https://eslint.org/docs/rules/curly
+  curly: [error, all] # airbnb default: [error, multi-line]
+
+  ### Import ###
+
+  # Require modules with a single export to use a default export
+  # https://github.com/benmosher/eslint-plugin-import/blob/master/docs/rules/prefer-default-export.md
+  import/prefer-default-export: off # airbnb default: 'error'
+
+  # https://github.com/benmosher/eslint-plugin-import/blob/master/docs/rules/imports-first.md
+  import/first: off # airbnb default: ['error', 'absolute-first']
+
+  # import aws-sdk even if not installed
+  import/no-extraneous-dependencies: off
+
+  ### Debugging is allowed but not allowed to commit ###
+  no-console: 0 # airbnb default: 'error'
+
+  # was complaining about inline snapshots
+  no-irregular-whitespace:
+    - off

@@ -3,10 +3,27 @@ schema {
   mutation: Mutation
 }
 
+type FavoriteStop {
+  stopId: String!
+  stopName: String!
+  userLabel: String!
+}
+
+type Location {
+  lat: Int!
+  lon: Int!
+}
+
 type User {
-  id: String!
+  uuid: ID!
   email: String!
   username: String!
+  password: String!
+  status: Boolean!
+  dateCreated: String!
+  lastSignOn: String!
+  favoriteStops: [FavoriteStop]!
+  locations: [Location]!
 }
 
 type LoginResponse {
@@ -21,7 +38,7 @@ input RegisterInput {
 }
 
 input LoginInput {
-  email: String!
+  username: String!
   password: String!
 }
 

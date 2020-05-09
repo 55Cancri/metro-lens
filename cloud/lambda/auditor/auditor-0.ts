@@ -136,8 +136,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       /* add those vid of those vehicles to the store so they can be updated in dynamodb */
       const vids = vehicle.vehicle.map(({ vid }) => vid)
       winston.info(`The following buses are back online: ${vids.join(', ')}.`)
+
       return [...store, ...vids]
     }
+
     return store
   }, [] as string[])
 
@@ -183,6 +185,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       winston.info(
         `Found duplicate data for stopId ${stop.stopId} in route ${stop.routeId}. Skipping.`
       )
+
       return store
     }
 
@@ -298,7 +301,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       calledBy: 'auditor',
       apiCount,
     },
-    { history: true }
+    { historyTable: true }
   )
 
   /* define a dynamo item for the total number of api calls */
@@ -320,7 +323,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       /* total api count */
       dynamoService.write(totalApiCountItem),
       /* recent api count */
-      dynamoService.write(recentApiCountItem, { history: true }),
+      dynamoService.write(recentApiCountItem, { historyTable: true }),
       /* map of online bus predictions */
       dynamoService.write(updatedActiveVehiclesItem),
     ])
@@ -335,6 +338,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       .chunk(stopItems.map(dynamoService.toPutRequest), MAX_DYNAMO_REQUESTS)
       .reduce(async (store, items, i) => {
         await store
+
         return dynamoService.batchWrite(items)
       }, Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>)
 
@@ -343,6 +347,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       .chunk(mapItems.map(dynamoService.toPutRequest), MAX_DYNAMO_REQUESTS)
       .reduce(async (store, items, i) => {
         await store
+
         return dynamoService.batchWrite(items)
       }, Promise.resolve([]) as Promise<Dynamo.BatchWriteOutput>)
 

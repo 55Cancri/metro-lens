@@ -1,12 +1,12 @@
-/* login-0 is always the most recent version */
+/* register-0 is always the most recent version */
 import * as aws from 'aws-sdk'
-import * as Misc from '../types/misc'
-// import * as R from 'ramda'
-// import * as Rx from 'rxjs'
-// import * as Op from 'rxjs/operators'
+import * as bcrypt from 'bcryptjs'
+import { v4 as uuidv4 } from 'uuid'
+import * as jwt from 'jsonwebtoken'
 
 /* import services */
 import { apiServiceProvider } from '../services/api'
+import { iamServiceProvider } from '../services/iam'
 import { dynamoServiceProvider } from '../services/dynamodb'
 import { dateServiceProvider } from '../services/date'
 
@@ -18,14 +18,13 @@ import * as UnicornUtils from '../utils/unicorns'
 const { winston } = UnicornUtils
 
 /* import types */
+import * as Misc from '../types/misc'
+import * as Iam from '../types/iam'
 import * as Dynamo from '../types/dynamodb'
 import * as Api from '../types/api'
 
 /* ensure the dynamo table is in the correct region */
 aws.config.update({ region: 'us-east-1' })
-
-/* initialize the environment variables */
-const MAX_DYNAMO_REQUESTS = 25
 
 /* define error constants */
 const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
@@ -34,24 +33,68 @@ const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb err
 /* setup dynamodb client */
 const dynamodb = new aws.DynamoDB.DocumentClient()
 
-type Input = {
-  username: string
-  email: string
-  password: string
-}
-
 /* define the handler */
-export const handler = async (event?: Misc.AppsyncEvent<Input>) => {
-  winston.info('Start register.')
+export const handler = async (
+  event?: Misc.AppsyncEvent<Iam.ClientRegister>
+) => {
+  /* // TODO: initialize services in separate file */
+  const dateService = dateServiceProvider()
+  const iamService = iamServiceProvider({ iam: jwt })
+  const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
 
-  if (event) {
-    const dateService = dateServiceProvider()
-    const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
+  if (!objectUtils.objectIsEmpty(event) && event?.arguments.input) {
+    /* extract credentials provided by the client */
+    const { username, email, password } = event?.arguments.input
 
-    dynamoService
+    /* query in parallel by the username and email */
+    /* this allows users to enter either email or username */
+    const usernameCheck = dynamoService.findUser(username)
+    const emailCheck = dynamoService.findUser(email)
 
-    const { username, email, password } = event.arguments.input
+    /* resolve parallel queries */
+    const [usernameResult, emailResult] = await Promise.all([
+      usernameCheck,
+      emailCheck,
+    ])
+
+    /* if the user was not found by email or username */
+    if (
+      objectUtils.objectIsEmpty(usernameResult) &&
+      objectUtils.objectIsEmpty(emailCheck)
+    ) {
+      /* timestamp the creation date */
+      const now = dateService.getNowInISO()
+      const dateCreated = now
+      const lastSignOn = now
+
+      /* define the uuid (not id due to sort key) */
+      const uuid = uuidv4()
+
+      /* hash the users pashword with 10 salts */
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      /* define the user object to insert into dynamodb */
+      const user = {
+        uuid,
+        username,
+        email,
+        password: hashedPassword,
+        dateCreated,
+        lastSignOn,
+      }
+
+      /* save the user and get back addition fields */
+      const newUser = await dynamoService.saveUser(user)
+
+      /* generate a jwt access token */
+      const accessToken = iamService.generateToken({ uuid })
+
+      /* finally, return the user and access token to client */
+      return { user: newUser, accessToken }
+    }
+
+    throw new Error('User already exists.')
   }
 
-  return { userId: 1, fullName: 'Jarvis' }
+  throw new Error('Server error.')
 }

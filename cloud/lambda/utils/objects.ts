@@ -18,6 +18,7 @@ export const sizeOf = (value: any): number => {
             0
           ),
   }
+
   return typeSizes[typeof value as keyof typeof typeSizes](value)
 }
 

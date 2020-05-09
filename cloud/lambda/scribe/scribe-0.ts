@@ -91,12 +91,13 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const chunkedVehicleIds = arrayUtils.chunk(activeVehicleIds, 10)
 
   const vehiclesToBeUpdated = chunkedVehicleIds.map((listOfVehicleIds, i) => ({
-    ['api set ' + i + 1]: listOfVehicleIds.join(','),
+    [`api set ${i}${1}`]: listOfVehicleIds.join(','),
   }))
 
   winston.info(
-    'The following vehicles will be updated: ' +
-      JSON.stringify(vehiclesToBeUpdated)
+    `The following vehicles will be updated: ${JSON.stringify(
+      vehiclesToBeUpdated
+    )}`
   )
 
   /* create an array of the api parameter objects for the api calls */
@@ -180,6 +181,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const predictionsMap = predictions.reduce((store, prediction) => {
     if ('msg' in prediction) {
       winston.warn(`Bus ${prediction.vid} has gone offline.`)
+
       return store
     }
 
@@ -238,7 +240,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       status: busStatusMap,
       TTL: dateService.setTTLExpirationIn({ minutes: 2 }),
     },
-    { history: true }
+    { historyTable: true }
   )
 
   /* define a dynamodb item for the bus predictions */
@@ -256,7 +258,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       routes: vehicleMap,
       TTL: dateService.setTTLExpirationIn({ days: 1 }),
     },
-    { history: true }
+    { historyTable: true }
   )
 
   /* define a dynamodb item for the number of api calls just made */
@@ -268,7 +270,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
       apiCount,
       TTL: dateService.setTTLExpirationIn({ years: 1 }),
     },
-    { history: true }
+    { historyTable: true }
   )
 
   /* define a dynamodb item for the total number of api calls */
@@ -284,15 +286,15 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   await Promise.all([
     /* api counts */
     dynamoService.write(totalApiCountItem),
-    dynamoService.write(recentApiCountItem, { history: true }),
+    dynamoService.write(recentApiCountItem, { historyTable: true }),
 
     /* bus status */
     dynamoService.write(busStatusItem),
-    dynamoService.write(busStatusHistoryItem, { history: true }),
+    dynamoService.write(busStatusHistoryItem, { historyTable: true }),
 
     /* bus predictions */
     dynamoService.write(busPredictionsItem),
-    dynamoService.write(busPredictionHistoryItem, { history: true }),
+    dynamoService.write(busPredictionHistoryItem, { historyTable: true }),
   ])
 
   winston.info('Done.')

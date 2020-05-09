@@ -11,11 +11,30 @@ export type Scalars = {
   Float: number
 }
 
+export type FavoriteStop = {
+  __typename?: 'FavoriteStop'
+  stopId: Scalars['String']
+  stopName: Scalars['String']
+  userLabel: Scalars['String']
+}
+
+export type Location = {
+  __typename?: 'Location'
+  lat: Scalars['Int']
+  lon: Scalars['Int']
+}
+
 export type User = {
   __typename?: 'User'
-  id: Scalars['String']
+  uuid: Scalars['ID']
   email: Scalars['String']
   username: Scalars['String']
+  password: Scalars['String']
+  status: Scalars['Boolean']
+  dateCreated: Scalars['String']
+  lastSignOn: Scalars['String']
+  favoriteStops: Array<Maybe<FavoriteStop>>
+  locations: Array<Maybe<Location>>
 }
 
 export type LoginResponse = {
@@ -31,7 +50,7 @@ export type RegisterInput = {
 }
 
 export type LoginInput = {
-  email: Scalars['String']
+  username: Scalars['String']
   password: Scalars['String']
 }
 
@@ -68,7 +87,7 @@ export type LoginUserMutation = { __typename?: 'Mutation' } & {
     LoginResponse,
     'accessToken'
   > & {
-      user: { __typename?: 'User' } & Pick<User, 'id' | 'email' | 'username'>
+      user: { __typename?: 'User' } & Pick<User, 'uuid' | 'email' | 'username'>
     }
 }
 
@@ -81,7 +100,7 @@ export type RegisterUserMutation = { __typename?: 'Mutation' } & {
     LoginResponse,
     'accessToken'
   > & {
-      user: { __typename?: 'User' } & Pick<User, 'id' | 'email' | 'username'>
+      user: { __typename?: 'User' } & Pick<User, 'uuid' | 'email' | 'username'>
     }
 }
 
@@ -90,7 +109,7 @@ export const LoginUserDocument = gql`
     results: loginUser(input: $input) {
       accessToken
       user {
-        id
+        uuid
         email
         username
       }
@@ -141,7 +160,7 @@ export const RegisterUserDocument = gql`
     results: registerUser(input: $input) {
       accessToken
       user {
-        id
+        uuid
         email
         username
       }

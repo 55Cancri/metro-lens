@@ -1,13 +1,15 @@
+import * as Iam from '../types/iam'
 import * as Dynamo from '../types/dynamodb'
 import { winston } from '../utils/unicorns'
 
 /* define environment variables */
 const TABLE_NAME = process.env.TABLE_NAME || ''
 const HIST_TABLE_NAME = process.env.HIST_TABLE_NAME || ''
-const PARTITION_KEY = process.env.PARTITION_KEY || ''
-const HIST_PARTITION_KEY = process.env.HIST_PARTITION_KEY || ''
 const SORT_KEY = process.env.SORT_KEY || ''
+const PARTITION_KEY = process.env.PARTITION_KEY || ''
 const HIST_SORT_KEY = process.env.HIST_SORT_KEY || ''
+const HIST_PARTITION_KEY = process.env.HIST_PARTITION_KEY || ''
+const USERNAME_SORT_KEY = process.env.USERNAME_SORT_KEY || ''
 
 /**
  * The primary keys are:
@@ -28,15 +30,96 @@ export const dynamoServiceProvider = ({
   dynamodb,
   dateService,
 }: Dynamo.DynamoServiceProviderProps) => {
-  const findUser = async (username: string) => {
-    const params = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk = :sk',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'user', ':sk': 'status' },
+  type DynamoOptions = { historyTable?: boolean; usernameIndex?: boolean }
+
+  const generateItem = (
+    {
+      pk,
+      sk,
+      ...rest
+    }: {
+      pk: string
+      sk: string
+      [key: string]: unknown
+    },
+    options: DynamoOptions = {}
+  ) => {
+    if (options.historyTable) {
+      return { [HIST_PARTITION_KEY]: pk, [HIST_SORT_KEY]: sk, ...rest }
     }
 
-    const { Items } = await dynamodb.query(params).promise()
+    if (options.usernameIndex) {
+      return { [PARTITION_KEY]: pk, [USERNAME_SORT_KEY]: sk, ...rest }
+    }
+
+    return { [PARTITION_KEY]: pk, [SORT_KEY]: sk, ...rest }
+  }
+
+  const saveUser = async (user: Iam.PartialUser) => {
+    const defaults = {
+      favoriteStops: [],
+      locations: [],
+    }
+
+    const Item = generateItem({
+      pk: 'user',
+      sk: user.email,
+      uuid: user.uuid,
+      email: user.email,
+      username: user.username,
+      password: user.password,
+      dateCreated: user.dateCreated,
+      lastSignOn: user.lastSignOn,
+      ...defaults,
+    })
+
+    await dynamodb.put({ TableName: TABLE_NAME, Item }).promise()
+
+    return { ...user, ...defaults }
+  }
+
+  const findUser = async (emailOrUsername: string) => {
+    type Options = {
+      useIndex: boolean
+    }
+
+    /* return the params object */
+    const getParams = (sortKeyValue: string, options?: Options) => {
+      /* determine if user local secondary index should be used */
+      const withIndex = options?.useIndex ? { IndexName: 'usernameIndex' } : {}
+      const sortKeyName = options?.useIndex ? USERNAME_SORT_KEY : SORT_KEY
+
+      return {
+        ...withIndex,
+        TableName: TABLE_NAME,
+        KeyConditionExpression: '#pk = :pk AND #sk = :sk',
+        ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': sortKeyName },
+        ExpressionAttributeValues: { ':pk': 'user', ':sk': sortKeyValue },
+      } as Dynamo.QueryParams
+    }
+
+    const { Items: emailItems = [] } = await dynamodb
+      .query(getParams(emailOrUsername))
+      .promise()
+
+    if (emailItems.length > 0) {
+      const [userItemByEmail] = emailItems
+
+      return userItemByEmail as Dynamo.User
+    }
+
+    const { Items: usernameItems = [] } = await dynamodb
+      .query(getParams(emailOrUsername, { useIndex: true }))
+      .promise()
+
+    if (usernameItems.length > 0) {
+      const [userItemByUsername] = usernameItems
+
+      return userItemByUsername as Dynamo.User
+    }
+
+    /* user does not exist */
+    return {} as Dynamo.User
   }
 
   /* -------------------------------------------------------------------------- */
@@ -201,7 +284,8 @@ export const dynamoServiceProvider = ({
       },
     }
     const { Items } = await dynamodb.query(params).promise()
-    return <Dynamo.ApiCountTodayItem[]>Items
+
+    return Items as Dynamo.ApiCountTodayItem[]
   }
 
   const getApiCountTotal = async () => {
@@ -214,8 +298,9 @@ export const dynamoServiceProvider = ({
 
     const { Items } = await dynamodb.query(params).promise()
 
-    if (Items!.length > 0) {
-      const [item] = Items!
+    if (Items && Items?.length > 0) {
+      const [item] = Items
+
       return item.apiCountTotal as number
     }
 
@@ -266,15 +351,13 @@ export const dynamoServiceProvider = ({
     return Promise.all(vehiclesOfActiveBuses).then(([vehicles]) => vehicles)
   }
 
-  type DynamoOptions = { history?: boolean }
-
   const write = async (
     Item: Record<string, unknown>,
     options: DynamoOptions = {}
   ) => {
     /* define the params of the dynamoDB call */
     const params = {
-      TableName: options.history ? HIST_TABLE_NAME : TABLE_NAME,
+      TableName: options.historyTable ? HIST_TABLE_NAME : TABLE_NAME,
       Item,
     } as Dynamo.PutItemInput
 
@@ -299,23 +382,6 @@ export const dynamoServiceProvider = ({
     return dynamodb.batchWrite(params).promise() as Dynamo.BatchWriteOutput
   }
 
-  const generateItem = (
-    {
-      pk,
-      sk,
-      ...rest
-    }: {
-      pk: string
-      sk: string
-      [key: string]: unknown
-    },
-    options: DynamoOptions = {}
-  ) => ({
-    [options.history ? HIST_PARTITION_KEY : PARTITION_KEY]: pk,
-    [options.history ? HIST_SORT_KEY : SORT_KEY]: sk,
-    ...rest,
-  })
-
   /**
    * Map an item to the format of a batch write request.
    * @param Item
@@ -325,6 +391,17 @@ export const dynamoServiceProvider = ({
   })
 
   return {
+    /* dynamodb operations */
+    write,
+    batchWrite,
+    generateItem,
+    toPutRequest,
+
+    /* user dynamodb queries */
+    findUser,
+    saveUser,
+
+    /* lambda dynamodb */
     getMaps,
     getStops,
     getBusPredictions,
@@ -334,9 +411,5 @@ export const dynamoServiceProvider = ({
     // !NOTE - deprecated, delete from scribe 2.
     getStatusOfActiveBuses,
     getVehiclesOfActiveBuses,
-    toPutRequest,
-    generateItem,
-    batchWrite,
-    write,
   }
 }

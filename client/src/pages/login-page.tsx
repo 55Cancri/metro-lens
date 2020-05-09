@@ -1,6 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { useLoginUserMutation } from '../types/apollo-hooks'
 
 const pageVariants = {
   initial: { scale: 0.9, opacity: 0 },
@@ -16,6 +17,19 @@ export const LoginPage: React.FC = () => {
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
 
+  const [loginUserMutation, { data }] = useLoginUserMutation()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // make graphql api call
+    const { data: response } = await loginUserMutation({
+      variables: { input: { username, password } },
+    })
+
+    console.log({ mutationResponse: response })
+  }
+
   return (
     <motion.div
       variants={pageVariants}
@@ -24,7 +38,7 @@ export const LoginPage: React.FC = () => {
       exit="exit"
     >
       <h1>Login page</h1>
-      <form>
+      <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="username">
             Username
@@ -47,6 +61,7 @@ export const LoginPage: React.FC = () => {
             />
           </label>
         </div>
+        <button type="submit">Login</button>
       </form>
       <p>
         {username} {password}

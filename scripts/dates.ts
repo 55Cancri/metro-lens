@@ -35,3 +35,12 @@ const output = dfz.formatToTimeZone(date, format, {
 // const output = dfz.formatToTimeZone(date, format, { timeZone: 'EST' })
 
 output
+
+const date1 = new Date()
+const date2 = new Date()
+
+const dates = [date1]
+
+const bool = df.isSameDay(...dates)
+
+bool

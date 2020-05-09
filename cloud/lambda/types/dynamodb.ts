@@ -6,6 +6,24 @@ type PrimaryKey = {
   id: string
 }
 
+export type User = PrimaryKey & {
+  uuid: string
+  email: string
+  password: string
+  username: string
+  dateCreated: string
+  lastSignOn: string
+  favoriteStops: {
+    stopId: string
+    stopName: string
+    userLabel: string
+  }[]
+  locations: {
+    lat: number
+    lon: number
+  }[]
+}
+
 // BusStatusItem === Vehicle
 export type BusStatusItem = PrimaryKey & {
   active: boolean

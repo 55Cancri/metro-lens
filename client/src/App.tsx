@@ -10,11 +10,11 @@ import { createSubscriptionHandshakeLink } from 'aws-appsync-subscription-link'
 import { Router } from './routes/router'
 
 const appsync = {
-  aws_appsync_graphqlEndpoint:
-    'https://fdxabewykbcdphov4o5edghzh4.appsync-api.us-east-1.amazonaws.com/graphql',
   aws_appsync_region: 'us-east-1',
   aws_appsync_authenticationType: 'API_KEY',
-  aws_appsync_apiKey: 'da2-6qrzqsddfrg6zibwpfcrus75qm',
+  aws_appsync_graphqlEndpoint:
+    'https://yo7d35ksxjexvjrvtb6q6edmgy.appsync-api.us-east-1.amazonaws.com/graphql',
+  aws_appsync_apiKey: 'da2-7ozvq2r43nck5mf4yxmkze5sdm',
 }
 
 const url = appsync.aws_appsync_graphqlEndpoint

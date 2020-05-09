@@ -8,7 +8,7 @@ mutation registerUser($input: RegisterInput!) {
   results: registerUser(input: $input) {
     accessToken
     user {
-      id
+      uuid
       email
       username
     }

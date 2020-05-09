@@ -1,5 +1,5 @@
 input LoginInput {
-  email: String!
+  username: String!
   password: String!
 }
 
@@ -7,7 +7,7 @@ mutation loginUser($input: LoginInput!) {
   results: loginUser(input: $input) {
     accessToken
     user {
-      id
+      uuid
       email
       username
     }
