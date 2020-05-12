@@ -14,9 +14,6 @@ const toConfig = path.resolve(__dirname, '../staging') + '/.env.atlantic'
 /* read the file in */
 dotenv.config({ path: toConfig })
 
-const UI_DIRECTORY = '../client/build'
-const SCHEMA_DIRECTORY = './graphql/schema.graphql'
-
 /* define the stack props after the dotenv file is configured */
 const props = getEnvironmentVariables()
 

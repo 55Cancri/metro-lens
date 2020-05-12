@@ -1,7 +1,8 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useHistory } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useRegisterUserMutation } from '../types/apollo-hooks'
+import * as UserContext from '../context/user-context'
 
 const pageVariants = {
   initial: { scale: 0.9, opacity: 0 },
@@ -14,25 +15,52 @@ const pageVariants = {
 }
 
 export const RegisterPage: React.FC = () => {
+  /* initialize context */
+  const [, userDispatch] = UserContext.useUser()
+
+  /* define local state */
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [email, setEmail] = React.useState('')
+  const [error, setError] = React.useState('')
 
-  const [registerUserMutation, { data }] = useRegisterUserMutation()
+  /* initialize graphql mutation */
+  const [registerUserMutation] = useRegisterUserMutation()
+
+  /* initialize route history */
+  const history = useHistory()
 
   const handleSubmit = async (e: React.FormEvent) => {
+    /* disable page reload on submit */
     e.preventDefault()
 
-    console.log(
-      `Sending with username: ${username}, email: ${email}, password: ${password}.`
-    )
+    try {
+      // make graphql api call
+      const { data } = await registerUserMutation({
+        variables: { input: { email, password, username } },
+      })
 
-    // make graphql api call
-    const { data: response } = await registerUserMutation({
-      variables: { input: { email, password, username } },
-    })
+      if (data) {
+        /* clear error message */
+        setError('')
 
-    console.log({ mutationResponse: response })
+        /* extract the credentials from the response */
+        const { results: credentials } = data
+
+        /* update the global store */
+        userDispatch({ type: 'login', credentials })
+
+        /* redirect to dashboard page */
+        history.push('/dashboard')
+      }
+    } catch (errors) {
+      const [graphqlError] = errors.graphQLErrors
+      const { message } = graphqlError
+      /* reset input fields on error */
+      setUsername('')
+      setPassword('')
+      return setError(message)
+    }
   }
 
   return (
@@ -77,11 +105,9 @@ export const RegisterPage: React.FC = () => {
             />
           </label>
         </div>
+        {error && <p>{error}</p>}
         <button type="submit">Register</button>
       </form>
-      <p>
-        {username} {password}
-      </p>
       <Link to="login">Login</Link>
     </motion.div>
   )

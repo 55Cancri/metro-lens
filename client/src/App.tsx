@@ -6,6 +6,8 @@ import { ApolloProvider } from '@apollo/react-hooks'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { createAuthLink, AuthOptions } from 'aws-appsync-auth-link'
 import { createSubscriptionHandshakeLink } from 'aws-appsync-subscription-link'
+import * as AppContext from './context/app-context'
+import * as UserContext from './context/user-context'
 
 import { Router } from './routes/router'
 
@@ -26,10 +28,11 @@ const auth = {
 
 const httpLink = createHttpLink({ uri: url })
 
-const link = ApolloLink.from([
-  createAuthLink({ url, region, auth }),
-  createSubscriptionHandshakeLink(url, httpLink),
-])
+const authLink = createAuthLink({ url, region, auth })
+
+const subLink = createSubscriptionHandshakeLink(url, httpLink)
+
+const link = ApolloLink.from([authLink, subLink])
 
 const client = new ApolloClient({
   link,
@@ -38,6 +41,10 @@ const client = new ApolloClient({
 
 export const App: React.FC = () => (
   <ApolloProvider client={client}>
-    <Router />
+    <AppContext.AppProvider>
+      <UserContext.UserProvider>
+        <Router />
+      </UserContext.UserProvider>
+    </AppContext.AppProvider>
   </ApolloProvider>
 )

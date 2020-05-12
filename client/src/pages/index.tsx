@@ -1,11 +1,5 @@
-import { SplashPage } from './splash-page'
-import { DashboardPage } from './dashboard-page'
-import { RegisterPage } from './register-page'
-import { LoginPage } from './login-page'
-
-export default {
-  SplashPage,
-  DashboardPage,
-  RegisterPage,
-  LoginPage,
-}
+export { SplashPage } from './splash-page'
+export { DashboardPage } from './dashboard-page'
+export { RegisterPage } from './register-page'
+export { LoginPage } from './login-page'
+export { NotFoundPage } from './not-found'

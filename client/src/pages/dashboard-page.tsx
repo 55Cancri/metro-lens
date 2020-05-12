@@ -1,25 +1,62 @@
 /** @jsx jsx */
 import React, { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { jsx } from '@emotion/core'
 import axios from 'axios'
-import { motion } from 'framer-motion'
+import * as L from 'react-leaflet'
+// const { Map: LeafletMap, TileLayer, Marker, Popup } = ReactLeaflet
+import * as colors from '../constants/colors'
 
 const styles: Styles = {
-  padding: '20px 50px',
+  layout: {
+    padding: '20px 50px',
+  },
+  input: {
+    display: 'grid',
+    height: 25,
+    width: '50%',
+    marginTop: 25,
+    padding: '4px 10px',
+    border: 0,
+    outline: 0,
+    borderRadius: 4,
+    backgroundColor: colors.grey15,
+  },
 }
 
-const inputStyles: Styles = {
-  display: 'grid',
-  height: 25,
-  width: '50%',
-  padding: '4px 10px',
-  border: 0,
-  outline: 0,
-  borderRadius: 4,
-  backgroundColor: '#e6e6e6',
+const x = {
+  // user location
+  userPosition: {
+    lat: 1,
+    lon: 2,
+  },
+  transportPosition: {
+    buses: {},
+    metro: {},
+  },
+  geoPosition: {
+    metroLines: {},
+    routeStops: {
+      '2101': {
+        'Gallows Rd': {
+          lat: 2,
+          lon: 4,
+          type: 'waypoint',
+        },
+        // ...
+      },
+      // ...
+    },
+  },
 }
 
 export const DashboardPage: React.FC = () => {
+  type UserPosition = {
+    lat: number
+    lon: number
+    zoom: number
+  }
+
   const pageVariants = {
     initial: { scale: 0.9, opacity: 0 },
     enter: { scale: 1, opacity: 1 },
@@ -31,20 +68,18 @@ export const DashboardPage: React.FC = () => {
   }
 
   const [loading, setLoading] = useState(true)
-  const [userPosition, setUserPosition] = useState({})
+  const [userPosition, setUserPosition] = useState<Partial<UserPosition>>({})
   const [mapLink, setMapLink] = useState('')
 
-  const storeUserPosition = async () => {
+  const trackUserPosition = async () => {
     const onSuccess = (position: Position) => {
-      const { latitude } = position.coords
-      const { longitude } = position.coords
+      const { latitude: lat } = position.coords
+      const { longitude: lon } = position.coords
 
       console.log({ position })
 
-      setUserPosition({ lat: latitude, lon: longitude })
-      setMapLink(
-        `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`
-      )
+      setUserPosition({ lat, lon, zoom: 13 })
+      setMapLink(`https://www.openstreetmap.org/#map=18/${lat}/${lon}`)
       setLoading(false)
     }
 
@@ -60,15 +95,18 @@ export const DashboardPage: React.FC = () => {
     }
   }
 
+  const stopTrackingUserPosition = (id: string) => {}
+
   useEffect(() => {
-    storeUserPosition()
+    const id = trackUserPosition()
+    // return stopTrackingUserPosition(id)
   }, [])
 
-  if (loading) return <p>Loading...</p>
+  if (loading) return <motion.p>Loading...</motion.p>
 
   return (
     <motion.div
-      css={styles}
+      css={styles.layout}
       variants={pageVariants}
       initial="exit"
       animate="enter"
@@ -76,13 +114,33 @@ export const DashboardPage: React.FC = () => {
     >
       <header>
         <h1>Metro Lens</h1>
-        <input css={inputStyles} />
+        <nav>
+          <button>Map</button>
+          <button>Favorites</button>
+          <button>Search</button>
+        </nav>
+        <input css={styles.input} />
       </header>
       <main>
         <div>
           <h2>Home to Dunn-Loring</h2>
           <a href={mapLink}>link</a>
         </div>
+
+        <L.Map
+          center={[userPosition.lat!, userPosition.lon!]}
+          zoom={userPosition.zoom}
+        >
+          <L.TileLayer
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.osm.org/{z}/{x}/{y}.png"
+          />
+          <L.Marker position={[userPosition.lat!, userPosition.lon!]}>
+            <L.Popup>
+              A pretty CSS3 popup. <br /> Easily customizable.
+            </L.Popup>
+          </L.Marker>
+        </L.Map>
       </main>
     </motion.div>
   )

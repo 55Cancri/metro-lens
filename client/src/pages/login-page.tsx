@@ -1,7 +1,8 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useHistory } from 'react-router-dom'
 import { useLoginUserMutation } from '../types/apollo-hooks'
+import * as UserContext from '../context/user-context'
 
 const pageVariants = {
   initial: { scale: 0.9, opacity: 0 },
@@ -14,20 +15,51 @@ const pageVariants = {
 }
 
 export const LoginPage: React.FC = () => {
+  /* initialize context */
+  const [, userDispatch] = UserContext.useUser()
+
+  /* define local state */
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [error, setError] = React.useState('')
 
-  const [loginUserMutation, { data }] = useLoginUserMutation()
+  /* initialize graphql mutation */
+  const [loginUserMutation] = useLoginUserMutation()
+
+  /* initialize route history */
+  const history = useHistory()
 
   const handleSubmit = async (e: React.FormEvent) => {
+    /* disable page reload on submit */
     e.preventDefault()
 
-    // make graphql api call
-    const { data: response } = await loginUserMutation({
-      variables: { input: { username, password } },
-    })
+    try {
+      /* make graphql api call */
+      const { data } = await loginUserMutation({
+        variables: { input: { username, password } },
+      })
 
-    console.log({ mutationResponse: response })
+      if (data) {
+        /* clear error message */
+        setError('')
+
+        /* extract the credentials from the response */
+        const { results: credentials } = data
+
+        /* update the global store */
+        userDispatch({ type: 'login', credentials })
+
+        /* redirect to dashboard page */
+        history.push('/dashboard')
+      }
+    } catch (errors) {
+      const [graphqlError] = errors.graphQLErrors
+      const { message } = graphqlError
+      /* reset input fields on error */
+      setUsername('')
+      setPassword('')
+      return setError(message)
+    }
   }
 
   return (
@@ -61,11 +93,9 @@ export const LoginPage: React.FC = () => {
             />
           </label>
         </div>
+        {error && <p>{error}</p>}
         <button type="submit">Login</button>
       </form>
-      <p>
-        {username} {password}
-      </p>
       <Link to="register">Register</Link>
     </motion.div>
   )

@@ -3,6 +3,7 @@ root: true
 globals:
   node: true
   jest: true
+  jest/globals: true
 
 # no import keyword errors
 parser: '@typescript-eslint/parser'
@@ -37,3 +38,5 @@ rules:
   no-unused-expressions": off
   # better version of no-undef with optional chaining support
   '@typescript-eslint/no-unused-expressions': error
+  # no semi-colons needed in types
+  '@typescript-eslint/member-delimiter-style': off
