@@ -6,6 +6,7 @@ import axios from 'axios'
 import * as L from 'react-leaflet'
 // const { Map: LeafletMap, TileLayer, Marker, Popup } = ReactLeaflet
 import * as colors from '../constants/colors'
+// import 'leaflet/dist/leaflet.css'
 
 const styles: Styles = {
   layout: {
@@ -91,7 +92,11 @@ export const DashboardPage: React.FC = () => {
       console.log('Geolocation is not supported by your browser')
     } else {
       console.log('Locating…')
-      navigator.geolocation.getCurrentPosition(onSuccess, onError)
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        timeout: 5 * 1000,
+        maximumAge: 0,
+      })
     }
   }
 
@@ -128,6 +133,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <L.Map
+          style={{ height: 500, width: 500 }}
           center={[userPosition.lat!, userPosition.lon!]}
           zoom={userPosition.zoom}
         >

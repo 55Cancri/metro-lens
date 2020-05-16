@@ -1,5 +1,6 @@
 import React from 'react'
 import { Route, Redirect, RouteProps } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import * as UserContext from '../context/user-context'
 
 /**
@@ -27,7 +28,9 @@ export const PrivateRoute: React.FC<RouteProps> = ({ children, ...rest }) => {
         isAuthenticated ? (
           children
         ) : (
-          <Redirect to={{ pathname: '/login', state: { from: location } }} />
+          <motion.div exit="undefined">
+            <Redirect to={{ pathname: '/login', state: { from: location } }} />
+          </motion.div>
         )
       }
     />

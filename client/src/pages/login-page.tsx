@@ -53,12 +53,24 @@ export const LoginPage: React.FC = () => {
         history.push('/dashboard')
       }
     } catch (errors) {
-      const [graphqlError] = errors.graphQLErrors
-      const { message } = graphqlError
-      /* reset input fields on error */
-      setUsername('')
-      setPassword('')
-      return setError(message)
+      if ('graphQLErrors' in errors) {
+        const { graphQLErrors, message } = errors
+        if (graphQLErrors.length > 0) {
+          const [graphqlError] = graphQLErrors
+          const { message } = graphqlError
+          /* reset input fields on error */
+          setUsername('')
+          setPassword('')
+          return setError(message)
+        }
+        /* reset input fields on error */
+        setUsername('')
+        setPassword('')
+        return setError(message)
+      }
+
+      const defaultMessage = 'An unknown error occurred'
+      return setError(defaultMessage)
     }
   }
 
