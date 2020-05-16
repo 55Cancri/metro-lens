@@ -133,7 +133,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <L.Map
-          style={{ height: 500, width: 500 }}
+          style={{ height: 500, width: '100%' }}
           center={[userPosition.lat!, userPosition.lon!]}
           zoom={userPosition.zoom}
         >
