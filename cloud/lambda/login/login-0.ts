@@ -77,8 +77,11 @@ export const handler = async (event?: Misc.AppsyncEvent<Iam.ClientLogin>) => {
       throw new Error('Invalid credentials.')
     }
 
+    /* create the payload for the jwt */
+    const payload = { uuid, username, email: user.email }
+
     /* create an access token */
-    const accessToken = iamService.generateToken({ uuid })
+    const accessToken = iamService.generateToken(payload)
 
     // login was successful
     return { accessToken, user }

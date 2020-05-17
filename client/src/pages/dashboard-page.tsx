@@ -4,9 +4,15 @@ import { motion } from 'framer-motion'
 import { jsx } from '@emotion/core'
 import axios from 'axios'
 import * as L from 'react-leaflet'
-// const { Map: LeafletMap, TileLayer, Marker, Popup } = ReactLeaflet
 import * as colors from '../constants/colors'
-// import 'leaflet/dist/leaflet.css'
+import * as urls from '../constants/urls'
+
+/**
+ * Maps:
+ * CartoDB.Voyager
+ * CartoDB.Positron + (DarkMatter)
+ *
+ */
 
 const styles: Styles = {
   layout: {
@@ -137,10 +143,7 @@ export const DashboardPage: React.FC = () => {
           center={[userPosition.lat!, userPosition.lon!]}
           zoom={userPosition.zoom}
         >
-          <L.TileLayer
-            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.osm.org/{z}/{x}/{y}.png"
-          />
+          <L.TileLayer url={urls.lightMap} />
           <L.Marker position={[userPosition.lat!, userPosition.lon!]}>
             <L.Popup>
               A pretty CSS3 popup. <br /> Easily customizable.

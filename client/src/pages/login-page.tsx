@@ -49,6 +49,9 @@ export const LoginPage: React.FC = () => {
         /* update the global store */
         userDispatch({ type: 'login', credentials })
 
+        /* store the jwt in local storage */
+        localStorage.setItem('jwt', credentials.accessToken)
+
         /* redirect to dashboard page */
         history.push('/dashboard')
       }
