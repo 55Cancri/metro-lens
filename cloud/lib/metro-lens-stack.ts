@@ -245,6 +245,7 @@ export class MetroLensStack extends cdk.Stack {
         HIST_TABLE_NAME: metrolensHistTable.tableName,
         CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
         WMATA_KEY: String(process.env.WMATA_KEY),
+        GRAPHQL_ENDPOINT: String(process.env.GRAPHQL_ENDPOINT),
       },
     })
 

@@ -14,10 +14,10 @@ import { dateServiceProvider } from '../services/date'
 /* import utils */
 import * as objectUtils from '../utils/objects'
 import * as arrayUtils from '../utils/arrays'
-import * as UnicornUtils from '../utils/unicorns'
+import * as unicornUtils from '../utils/unicorns'
 import { busMocks } from '../mocks/buses'
 
-const { winston } = UnicornUtils
+const { winston } = unicornUtils
 
 /* import types */
 import * as Dynamo from '../types/dynamodb'
@@ -28,6 +28,7 @@ aws.config.update({ region: 'us-east-1' })
 
 /* initialize the environment variables */
 const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
+const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || ''
 const MAX_DYNAMO_REQUESTS = 25
 
 /* define error constants */
@@ -222,7 +223,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
   /* log the size of the vehicle map */
   winston.info(
-    `Vehicle Size: ${UnicornUtils.formatBytes(objectUtils.sizeOf(vehicleMap))}.`
+    `Vehicle Size: ${unicornUtils.formatBytes(objectUtils.sizeOf(vehicleMap))}.`
   )
 
   /* define a dynamodb item for the status of buses */
@@ -296,6 +297,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     dynamoService.write(busPredictionsItem),
     dynamoService.write(busPredictionHistoryItem, { historyTable: true }),
   ])
+
+  unicornUtils.print(vehicleMap)
+
+  await apiService.busPositionMutation(GRAPHQL_ENDPOINT, vehicleMap)
 
   winston.info('Done.')
 }

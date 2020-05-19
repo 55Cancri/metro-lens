@@ -10,13 +10,15 @@ import * as Iam from '../../../shared/types/iam'
 /**
  * A wrapper for <Route> that redirects to the login
  * screen if you're not yet authenticated.
- * @param param0
+ * @param {RouteProps}
  */
 export const PrivateRoute: React.FC<RouteProps> = ({ children, ...rest }) => {
   /* initialize context and the get user context */
   const [userState, userDispatch] = UserContext.useUser()
 
-  /* store the jwt in local storage */
+  console.log('Loading.')
+
+  /* get the jwt in local storage */
   const localAccessToken = localStorage.getItem('jwt')
 
   /* determine if the context is empty */

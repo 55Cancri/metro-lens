@@ -1676,6 +1676,11 @@
   resolved "https://registry.yarnpkg.com/@types/jwt-decode/-/jwt-decode-2.2.1.tgz#afdf5c527fcfccbd4009b5fd02d1e18241f2d2f2"
   integrity sha512-aWw2YTtAdT7CskFyxEX2K21/zSDStuf/ikI3yBqmwpwJF0pS+/IX5DWv+1UFffZIbruP6cnT9/LAJV1gFwAT1A==
 
+"@types/latlon-geohash@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/latlon-geohash/-/latlon-geohash-2.0.0.tgz#384723d354cfe40197bb0fadaf2e72f649736314"
+  integrity sha512-bwTttcqf8StBA+ABJ4gxbgA+PgueUJGxjYzuWrlFfzDbIQd2FvOcE5l/0fY+BOKqmeWYAzjBQFdnKweI8KKNpA==
+
 "@types/leaflet@*":
   version "1.5.12"
   resolved "https://registry.yarnpkg.com/@types/leaflet/-/leaflet-1.5.12.tgz#9953b7e47a53e0a70cdd7a903a43dc3c343cf623"
@@ -7183,6 +7188,11 @@ last-call-webpack-plugin@^3.0.0:
   dependencies:
     lodash "^4.17.5"
     webpack-sources "^1.1.0"
+
+latlon-geohash@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/latlon-geohash/-/latlon-geohash-2.0.0.tgz#2b0203ab30ef56a18600b0312b8c3a627cbd17d1"
+  integrity sha512-OKBswTwrvTdtenV+9C9euBmvgGuqyjJNAzpQCarRz1m8/pYD2nz9fKkXmLs2S3jeXaLi3Ry76twQplKKUlgS/g==
 
 lazy-cache@^0.2.3:
   version "0.2.7"

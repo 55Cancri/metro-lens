@@ -38,11 +38,6 @@ const dynamodb = new aws.DynamoDB.DocumentClient()
 
 /* define the handler */
 export const handler = async (event?: Misc.AppsyncEvent<Iam.ClientLogin>) => {
-  winston.info('Start login.')
-
-  winston.info('Received event:')
-  winston.info({ event })
-
   /* // TODO: initialize services in separate file */
   const dateService = dateServiceProvider()
   const iamService = iamServiceProvider({ iam: jwt })

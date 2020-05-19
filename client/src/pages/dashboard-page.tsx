@@ -3,16 +3,23 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { jsx } from '@emotion/core'
 import axios from 'axios'
+import geo from 'latlon-geohash'
 import * as L from 'react-leaflet'
 import * as colors from '../constants/colors'
 import * as urls from '../constants/urls'
-
+import { useDimensions } from '../hooks/use-dimensions'
 /**
  * Maps:
  * CartoDB.Voyager
  * CartoDB.Positron + (DarkMatter)
  *
  */
+
+type UserPosition = {
+  lat: number
+  lon: number
+  zoom: number
+}
 
 const styles: Styles = {
   layout: {
@@ -28,6 +35,16 @@ const styles: Styles = {
     outline: 0,
     borderRadius: 4,
     backgroundColor: colors.grey15,
+  },
+}
+
+const pageVariants = {
+  initial: { scale: 0.9, opacity: 0 },
+  enter: { scale: 1, opacity: 1 },
+  exit: {
+    scale: 0.5,
+    opacity: 0,
+    transition: { duration: 1.5 },
   },
 }
 
@@ -58,39 +75,31 @@ const x = {
 }
 
 export const DashboardPage: React.FC = () => {
-  type UserPosition = {
-    lat: number
-    lon: number
-    zoom: number
-  }
-
-  const pageVariants = {
-    initial: { scale: 0.9, opacity: 0 },
-    enter: { scale: 1, opacity: 1 },
-    exit: {
-      scale: 0.5,
-      opacity: 0,
-      transition: { duration: 1.5 },
-    },
-  }
-
   const [loading, setLoading] = useState(true)
   const [userPosition, setUserPosition] = useState<Partial<UserPosition>>({})
   const [mapLink, setMapLink] = useState('')
+  // const [mapRef, mapDimensions] = useDimensions()
 
   const trackUserPosition = async () => {
     const onSuccess = (position: Position) => {
       const { latitude: lat } = position.coords
       const { longitude: lon } = position.coords
 
-      console.log({ position })
+      const hash = geo.encode(lat, lon)
 
-      setUserPosition({ lat, lon, zoom: 13 })
+      const gallowsRd = geo.encode(38.873690918043, -77.226829000001)
+      const tysonsCorner = geo.encode(38.919904915207, -77.222905999999)
+      const restonTownCenter = geo.encode(38.957020912946, -77.359064)
+
+      console.log({ position, hash, gallowsRd, tysonsCorner, restonTownCenter })
+
+      setUserPosition({ lat, lon, zoom: 16 })
       setMapLink(`https://www.openstreetmap.org/#map=18/${lat}/${lon}`)
       setLoading(false)
     }
 
-    const onError = () => {
+    const onError = (error: PositionError) => {
+      console.log({ error })
       console.log('Unable to retrieve your location')
     }
 
@@ -100,7 +109,7 @@ export const DashboardPage: React.FC = () => {
       console.log('Locating…')
       navigator.geolocation.getCurrentPosition(onSuccess, onError, {
         enableHighAccuracy: true,
-        timeout: 5 * 1000,
+        timeout: 30 * 1000,
         maximumAge: 0,
       })
     }
@@ -114,6 +123,8 @@ export const DashboardPage: React.FC = () => {
   }, [])
 
   if (loading) return <motion.p>Loading...</motion.p>
+
+  // console.log({ mapDimensions })
 
   return (
     <motion.div
@@ -142,6 +153,9 @@ export const DashboardPage: React.FC = () => {
           style={{ height: 500, width: '100%' }}
           center={[userPosition.lat!, userPosition.lon!]}
           zoom={userPosition.zoom}
+          ref={(node) =>
+            console.log({ node: node?.container?.getBoundingClientRect() })
+          }
         >
           <L.TileLayer url={urls.lightMap} />
           <L.Marker position={[userPosition.lat!, userPosition.lon!]}>

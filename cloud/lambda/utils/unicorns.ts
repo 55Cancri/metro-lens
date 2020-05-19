@@ -1,9 +1,8 @@
 import chalk from 'chalk'
 import logger from 'winston'
-// import * as df from 'date-fns'
 import * as dfz from 'date-fns-timezone'
+import util from 'util'
 
-// @ts-ignore
 import { format as SAFE_format } from 'logform/dist/browser'
 
 const format = SAFE_format as typeof logger.format
@@ -50,6 +49,9 @@ export const winston = logger.createLogger({
  */
 export const print = (item: unknown) =>
   console.log(JSON.stringify(item, null, 2))
+
+const trace = (item: unknown) =>
+  console.log(util.inspect(item, false, null, true))
 
 export const is = <T>(value: unknown, condition: boolean): value is T =>
   condition

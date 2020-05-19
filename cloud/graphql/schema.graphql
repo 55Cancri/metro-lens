@@ -1,6 +1,18 @@
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
+}
+
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
 }
 
 type FavoriteStop {
@@ -31,23 +43,25 @@ type LoginResponse {
   user: User!
 }
 
-input RegisterInput {
-  username: String!
-  email: String!
-  password: String!
-}
+# type Map {
+# }
 
-input LoginInput {
-  username: String!
-  password: String!
+type Bus {
+  routes: JSON
 }
 
 type Query {
   getUser(id: ID!): User
   getUsers: [User]
+  getMap: Map
 }
 
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
+  getBuses: Bus
+}
+
+type Subscription {
+  
 }

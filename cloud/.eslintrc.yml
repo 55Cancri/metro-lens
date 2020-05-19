@@ -40,3 +40,5 @@ rules:
   '@typescript-eslint/no-unused-expressions': error
   # no semi-colons needed in types
   '@typescript-eslint/member-delimiter-style': off
+
+  '@typescript-eslint/camelcase': off

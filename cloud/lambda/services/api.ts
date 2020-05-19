@@ -376,6 +376,20 @@ export const apiServiceProvider = ({
     // )
   }
 
+  const busPositionMutation = (endpoint: string, buses) =>
+    httpClient.post(
+      endpoint,
+      {
+        query: `mutation updateBusPositions() {
+          updateBusPositions() {
+            buses
+          }
+        }`,
+        variables: { buses },
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
   return {
     getStop,
     getVehicles,
@@ -386,5 +400,6 @@ export const apiServiceProvider = ({
     getVehiclesForEveryRoute,
     getActiveVehicles,
     makeDualApiCalls,
+    busPositionMutation,
   }
 }
