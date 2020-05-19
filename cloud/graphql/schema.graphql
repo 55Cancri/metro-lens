@@ -63,5 +63,5 @@ type Mutation {
 }
 
 type Subscription {
-  
+  updateBusPositions(): Bus
 }

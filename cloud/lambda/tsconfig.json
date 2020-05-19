@@ -6,6 +6,7 @@
     "noEmit": true,
     "target": "ES2015",
     "lib": ["ES2020", "ESNext"],
+    "skipLibCheck": true,
     "module": "CommonJS",
     "outDir": "./dist",
     "strict": true,
