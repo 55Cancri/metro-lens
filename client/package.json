@@ -8,7 +8,7 @@
     "eject": "react-scripts eject",
     "vehicles": "npx ts-node --files ./scripts/get-vehicles.ts --project ./tsconfig.json",
     "test-interactive": "react-scripts test",
-    "test": "react-scripts test --watchAll=false --env=jsdom --coverage",
+    "test": "react-scripts test --watchAll=false --verbose=true --env=jsdom --coverage --transformIgnorePatterns 'node_modules/(?!(latlon-geohash)/)'",
     "cdk-deploy": "cd .. && yarn run cdk-deploy && cd client",
     "deploy": "../deploy.sh"
   },
