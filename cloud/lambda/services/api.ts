@@ -376,16 +376,30 @@ export const apiServiceProvider = ({
     // )
   }
 
-  const busPositionMutation = (endpoint: string, buses) =>
+  const busPositionMutation = (endpoint: string, buses: unknown) =>
     httpClient.post(
       endpoint,
       {
         query: `mutation updateBusPositions() {
-          updateBusPositions() {
+          updateBusPositions {
             buses
           }
         }`,
         variables: { buses },
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
+  const testMutation = (endpoint: string) =>
+    httpClient.post(
+      endpoint,
+      {
+        query: `mutation testMutation {
+          testMutation {
+            entity
+            id
+          }
+        }`,
       },
       { headers: { 'Content-Type': 'application/json' } }
     )
@@ -401,5 +415,6 @@ export const apiServiceProvider = ({
     getActiveVehicles,
     makeDualApiCalls,
     busPositionMutation,
+    testMutation,
   }
 }

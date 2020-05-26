@@ -1,6 +1,9 @@
 # Local development
 1. `cd` into client folder, then run `yarn start`.
 
+# Update components when graphql schema changes
+1. `cd` into the `/cloud` directory and run `yarn watch`.
+2. This command will look for changes in both the server graphql schema and the schemas used by React and generate or update new React components.
 
 # Deploy to production
 1. Run `yarn deploy`.

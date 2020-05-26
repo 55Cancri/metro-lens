@@ -1,3 +1,14 @@
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
 type FavoriteStop {
   stopId: String!
   stopName: String!
@@ -26,15 +37,15 @@ type LoginResponse {
   user: User!
 }
 
-input RegisterInput {
-  username: String!
-  email: String!
-  password: String!
+type Bus {
+  entity: String!
+  id: String!
+  routes: String
 }
 
-input LoginInput {
-  username: String!
-  password: String!
+type Test {
+  name: String!
+  age: String!
 }
 
 type Query {
@@ -45,4 +56,11 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
+  updateBusPositions: String
+  testMutation: Test
+}
+
+type Subscription {
+  updatedBusPositions: String
+  testedMutation: Test
 }

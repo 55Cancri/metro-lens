@@ -3,6 +3,7 @@ import logger from 'winston'
 import * as dfz from 'date-fns-timezone'
 import util from 'util'
 
+// @ts-ignore
 import { format as SAFE_format } from 'logform/dist/browser'
 
 const format = SAFE_format as typeof logger.format

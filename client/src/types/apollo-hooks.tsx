@@ -11,6 +11,17 @@ export type Scalars = {
   Float: number
 }
 
+export type RegisterInput = {
+  username: Scalars['String']
+  email: Scalars['String']
+  password: Scalars['String']
+}
+
+export type LoginInput = {
+  username: Scalars['String']
+  password: Scalars['String']
+}
+
 export type FavoriteStop = {
   __typename?: 'FavoriteStop'
   stopId: Scalars['String']
@@ -43,15 +54,17 @@ export type LoginResponse = {
   user: User
 }
 
-export type RegisterInput = {
-  username: Scalars['String']
-  email: Scalars['String']
-  password: Scalars['String']
+export type Bus = {
+  __typename?: 'Bus'
+  entity: Scalars['String']
+  id: Scalars['String']
+  routes?: Maybe<Scalars['String']>
 }
 
-export type LoginInput = {
-  username: Scalars['String']
-  password: Scalars['String']
+export type Test = {
+  __typename?: 'Test'
+  name: Scalars['String']
+  age: Scalars['String']
 }
 
 export type Query = {
@@ -68,6 +81,8 @@ export type Mutation = {
   __typename?: 'Mutation'
   registerUser: LoginResponse
   loginUser: LoginResponse
+  updateBusPositions?: Maybe<Scalars['String']>
+  testMutation?: Maybe<Test>
 }
 
 export type MutationRegisterUserArgs = {
@@ -76,6 +91,12 @@ export type MutationRegisterUserArgs = {
 
 export type MutationLoginUserArgs = {
   input: LoginInput
+}
+
+export type Subscription = {
+  __typename?: 'Subscription'
+  updatedBusPositions?: Maybe<Scalars['String']>
+  testedMutation?: Maybe<Test>
 }
 
 export type LoginUserMutationVariables = {
@@ -102,6 +123,12 @@ export type RegisterUserMutation = { __typename?: 'Mutation' } & {
   > & {
       user: { __typename?: 'User' } & Pick<User, 'uuid' | 'email' | 'username'>
     }
+}
+
+export type TestedMutationSubscriptionVariables = {}
+
+export type TestedMutationSubscription = { __typename?: 'Subscription' } & {
+  testedMutation?: Maybe<{ __typename?: 'Test' } & Pick<Test, 'name' | 'age'>>
 }
 
 export const LoginUserDocument = gql`
@@ -205,4 +232,45 @@ export type RegisterUserMutationResult = ApolloReactCommon.MutationResult<
 export type RegisterUserMutationOptions = ApolloReactCommon.BaseMutationOptions<
   RegisterUserMutation,
   RegisterUserMutationVariables
+>
+export const TestedMutationDocument = gql`
+  subscription testedMutation {
+    testedMutation {
+      name
+      age
+    }
+  }
+`
+
+/**
+ * __useTestedMutationSubscription__
+ *
+ * To run a query within a React component, call `useTestedMutationSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useTestedMutationSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTestedMutationSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useTestedMutationSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    TestedMutationSubscription,
+    TestedMutationSubscriptionVariables
+  >
+) {
+  return ApolloReactHooks.useSubscription<
+    TestedMutationSubscription,
+    TestedMutationSubscriptionVariables
+  >(TestedMutationDocument, baseOptions)
+}
+export type TestedMutationSubscriptionHookResult = ReturnType<
+  typeof useTestedMutationSubscription
+>
+export type TestedMutationSubscriptionResult = ApolloReactCommon.SubscriptionResult<
+  TestedMutationSubscription
 >

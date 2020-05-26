@@ -1,13 +1,17 @@
 /** @jsx jsx */
-import React, { useEffect, useState } from 'react'
+import React from 'react'
+import { useHistory } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { jsx } from '@emotion/core'
 import axios from 'axios'
 import geo from 'latlon-geohash'
 import * as L from 'react-leaflet'
-import * as colors from '../constants/colors'
+
 import * as urls from '../constants/urls'
+import * as colors from '../constants/colors'
+import * as variants from '../constants/variants'
 import { useDimensions } from '../hooks/use-dimensions'
+import { useTestedMutationSubscription } from '../types/apollo-hooks'
 /**
  * Maps:
  * CartoDB.Voyager
@@ -38,16 +42,6 @@ const styles: Styles = {
   },
 }
 
-const pageVariants = {
-  initial: { scale: 0.9, opacity: 0 },
-  enter: { scale: 1, opacity: 1 },
-  exit: {
-    scale: 0.5,
-    opacity: 0,
-    transition: { duration: 1.5 },
-  },
-}
-
 const x = {
   // user location
   userPosition: {
@@ -75,10 +69,19 @@ const x = {
 }
 
 export const DashboardPage: React.FC = () => {
-  const [loading, setLoading] = useState(true)
-  const [userPosition, setUserPosition] = useState<Partial<UserPosition>>({})
-  const [mapLink, setMapLink] = useState('')
+  const [loading, setLoading] = React.useState(true)
+  const [userPosition, setUserPosition] = React.useState<Partial<UserPosition>>(
+    {}
+  )
+  const [mapLink, setMapLink] = React.useState('')
+  const subscription = useTestedMutationSubscription()
   // const [mapRef, mapDimensions] = useDimensions()
+
+  console.log('SUBSCRIPTION RESULTS')
+  console.log({ subscription })
+
+  /* initialize route history */
+  const history = useHistory()
 
   const trackUserPosition = async () => {
     const onSuccess = (position: Position) => {
@@ -117,7 +120,12 @@ export const DashboardPage: React.FC = () => {
 
   const stopTrackingUserPosition = (id: string) => {}
 
-  useEffect(() => {
+  const handleClick = () => {
+    localStorage.removeItem('jwt')
+    return history.push('/')
+  }
+
+  React.useEffect(() => {
     const id = trackUserPosition()
     // return stopTrackingUserPosition(id)
   }, [])
@@ -129,7 +137,7 @@ export const DashboardPage: React.FC = () => {
   return (
     <motion.div
       css={styles.layout}
-      variants={pageVariants}
+      variants={variants.page}
       initial="exit"
       animate="enter"
       exit="exit"
@@ -140,6 +148,7 @@ export const DashboardPage: React.FC = () => {
           <button>Map</button>
           <button>Favorites</button>
           <button>Search</button>
+          <button onClick={handleClick}>Logout</button>
         </nav>
         <input css={styles.input} />
       </header>

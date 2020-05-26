@@ -47,21 +47,33 @@ type LoginResponse {
 # }
 
 type Bus {
-  routes: JSON
+  # pk
+  entity: String!
+  # sk
+  id: String!
+  # data
+  routes: String
+}
+
+type Test {
+  name: String!
+  age: String!
 }
 
 type Query {
   getUser(id: ID!): User
   getUsers: [User]
-  getMap: Map
+  # getMap: Map
 }
 
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  getBuses: Bus
+  updateBusPositions: String
+  testMutation: Test
 }
 
 type Subscription {
-  updateBusPositions(): Bus
+  updatedBusPositions: String @aws_subscribe(mutations: ["updateBusPositions"])
+  testedMutation: Test @aws_subscribe(mutations: ["testMutation"])
 }

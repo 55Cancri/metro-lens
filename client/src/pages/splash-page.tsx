@@ -3,6 +3,7 @@ import React from 'react'
 import { jsx } from '@emotion/core'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import * as variants from '../constants/variants'
 
 const styles: Styles = {
   display: 'grid',
@@ -19,35 +20,25 @@ const styles: Styles = {
     fontWeight: 700,
     color: '#fff',
     '&:nth-of-type(1)': {
-      backgroundColor: 'darkgrey'
+      backgroundColor: 'darkgrey',
     },
     '&:nth-of-type(2)': {
-      backgroundColor: 'dodgerblue'
+      backgroundColor: 'dodgerblue',
     },
     '&:nth-of-type(3)': {
-      backgroundColor: 'midnightblue'
+      backgroundColor: 'midnightblue',
     },
     '&:hover': {
       cursor: 'pointer',
       filter: 'brightness(.92)',
-      transition: '200ms all ease-in-out'
-    }
-  }
-}
-
-const pageVariants = {
-  initial: { scale: 0.9, opacity: 0 },
-  enter: { scale: 1, opacity: 1 },
-  exit: {
-    scale: 0.5,
-    opacity: 0,
-    transition: { duration: 1.5 }
-  }
+      transition: '200ms all ease-in-out',
+    },
+  },
 }
 
 export const SplashPage: React.FC = () => (
   <motion.div
-    variants={pageVariants}
+    variants={variants.page}
     initial="exit"
     animate="enter"
     exit="exit"

@@ -114,8 +114,8 @@ export class MetroLensStack extends cdk.Stack {
     const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
       name: 'metrolens-graphql-api',
       logConfig: {
-        /* log every resolver */
-        fieldLogLevel: appsync.FieldLogLevel.ALL,
+        /* log only errors */
+        fieldLogLevel: appsync.FieldLogLevel.ERROR,
       },
       // authorizationConfig: {
       //   defaultAuthorization: {
@@ -127,15 +127,6 @@ export class MetroLensStack extends cdk.Stack {
       // },
       schemaDefinitionFile: props?.schemaDirectory,
     })
-
-    /* appsync: create lambda */
-    // const appsyncLambda = new lambda.Function(this, 'appsyncTestLambda', {
-    //   code: lambda.Code.fromInline(
-    //     'exports.handler = (event, context) => { console.log(event); context.succeed(event); }'
-    //   ),
-    //   runtime: lambda.Runtime.NODEJS_12_X,
-    //   handler: 'index.handler',
-    // })
 
     /* appsync lambda to register user */
     const lambdaRegister = new nodejs.NodejsFunction(this, 'register', {
@@ -214,6 +205,56 @@ export class MetroLensStack extends cdk.Stack {
       fieldName: 'loginUser',
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    /* appsync: create test subscription lambda */
+    const testSubscriptionLambda = new lambda.Function(
+      this,
+      'testSubscriptionLambda',
+      {
+        code: lambda.Code.fromInline(
+          "exports.handler = (event, context) => { console.log(event); /* context.succeed(event)*/ return { name: 'Larry', age: '21' }; }"
+        ),
+        runtime: lambda.Runtime.NODEJS_12_X,
+        handler: 'index.handler',
+      }
+    )
+
+    /* appsync: add lambda as a data source */
+    const testSubscriptionDataSource = graphql.addLambdaDataSource(
+      'Test Subscription',
+      'Test Subscription Lambda',
+      testSubscriptionLambda
+    )
+
+    /* appsync:mutation response is handled by the lambda */
+    testSubscriptionDataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'testMutation',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    /* appsync: add lambda as a data source */
+    const lambdaTestMutationDataSource = graphql.addDynamoDbDataSource(
+      'Test',
+      'Metro DynamoDB table',
+      metrolensTable
+    )
+
+    /* appsync: should query dynamodb by the partition key by the mutation 
+      when the mutation is invoked */
+    lambdaTestMutationDataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'testMutation',
+      requestMappingTemplate: appsync.MappingTemplate.dynamoDbPutItem(
+        appsync.PrimaryKey.partition('entity')
+          .is('bus')
+          .sort('id')
+          .is('predictions'),
+        appsync.Values.projecting('routes')
+      ),
+      responseMappingTemplate: appsync.MappingTemplate.dynamoDbResultItem(),
     })
 
     /* -------------------------------------------------------------------------- */

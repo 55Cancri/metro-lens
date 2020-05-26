@@ -1,0 +1,6 @@
+subscription testedMutation {
+  testedMutation {
+    name
+    age
+  }
+}

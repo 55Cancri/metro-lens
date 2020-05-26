@@ -300,7 +300,10 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
   unicornUtils.print(vehicleMap)
 
-  await apiService.busPositionMutation(GRAPHQL_ENDPOINT, vehicleMap)
+  console.log('------INVOKING BUS POSITION MUTATION------')
+
+  await apiService.testMutation(GRAPHQL_ENDPOINT)
+  // await apiService.busPositionMutation(GRAPHQL_ENDPOINT, vehicleMap)
 
   winston.info('Done.')
 }
