@@ -1,6 +1,10 @@
 # Local development
 1. `cd` into client folder, then run `yarn start`.
 
+# Update api key
+1. In the appsync wizard, create a new key in the settings.
+2. Copy the API key and paste in `client/src/credentials.ts` and `cloud/staging/.env.atlantic`. Then in cloud/.env, update the `GRAPHQL_ENDPOINT` and the `GRAPHQL_API_KEY`.
+
 # Update components when graphql schema changes
 1. `cd` into the `/cloud` directory and run `yarn watch`.
 2. This command will look for changes in both the server graphql schema and the schemas used by React and generate or update new React components.

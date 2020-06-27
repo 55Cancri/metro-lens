@@ -78,15 +78,38 @@ export const dateServiceProvider = () => {
   const parsePredictedTime = (predictedTime: string) =>
     df.parse(predictedTime, 'yyyyMMdd HH:mm', new Date()).toISOString()
 
-  const greaterThanMinsAgo = (offlineDateInISO: string | null, mins = 45) =>
-    typeof offlineDateInISO === 'string' &&
-    df.differenceInMinutes(new Date(), new Date(offlineDateInISO)) > mins
+  /**
+   * Determine if x number of minutes have elapsed since a given ISO date string.
+   * The ISO date will be compared to the current date internally.
+   * @param {string} ISOStringDate
+   * @param {number} elapsedMinutes
+   */
+  const elapsedMinsGreaterThan = (
+    ISOStringDate: string | null,
+    elapsedMinutes = 45
+  ) =>
+    typeof ISOStringDate === 'string' &&
+    df.differenceInMinutes(new Date(), new Date(ISOStringDate)) > elapsedMinutes
+
+  /**
+   * Determine if the number of elapsed time since the ISO date string is than x number of minutes.
+   * The ISO date will be compared to the current date internally.
+   * @param {string} ISOStringDate
+   * @param {number} elapsedMinutes
+   */
+  const elapsedMinsLessThan = (
+    ISOStringDate: string | null,
+    elapsedMinutes = 45
+  ) =>
+    typeof ISOStringDate === 'string' &&
+    df.differenceInMinutes(new Date(), new Date(ISOStringDate)) < elapsedMinutes
 
   return {
     getNowInISO,
     getNowInMs,
     getEpochTime,
-    greaterThanMinsAgo,
+    elapsedMinsLessThan,
+    elapsedMinsGreaterThan,
     getEpochTimeIn5Minutes,
     getDifferenceInHours,
     setTTLExpirationIn,

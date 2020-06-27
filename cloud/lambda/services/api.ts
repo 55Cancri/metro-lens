@@ -155,7 +155,7 @@ export const apiServiceProvider = ({
     params: Api.HttpClientConnectorParams,
     routes: Api.ConnectorRoute[]
   ) => {
-    console.log('All routes:')
+    // console.log('All routes:')
     const patternPromise = routes.map(async ({ rt }) => {
       type Pattern = {
         stopId?: string
@@ -376,18 +376,32 @@ export const apiServiceProvider = ({
     // )
   }
 
-  const busPositionMutation = (endpoint: string, buses: unknown) =>
+  const busPositionMutation = (params: Record<'endpoint' | 'apiKey', string>) =>
     httpClient.post(
-      endpoint,
+      params.endpoint,
       {
-        query: `mutation updateBusPositions() {
+        query: `mutation updateBusPositions {
           updateBusPositions {
-            buses
+              vehicleId
+              rt
+              lat
+              lon
+              lastUpdateTime
+              predictions {
+                  arrivalIn
+                  arrivalTime
+                  stopId
+                  stopName
+              }
           }
-        }`,
-        variables: { buses },
+      }`,
       },
-      { headers: { 'Content-Type': 'application/json' } }
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': params.apiKey,
+        },
+      }
     )
 
   const testMutation = (endpoint: string) =>

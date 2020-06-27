@@ -170,6 +170,27 @@ export class MetroLensStack extends cdk.Stack {
       },
     })
 
+    /* appsync lambda to return bus predictions */
+    const lambdaBuses = new nodejs.NodejsFunction(this, 'buses', {
+      functionName: 'buses',
+      runtime: lambda.Runtime.NODEJS_12_X,
+      timeout: cdk.Duration.seconds(30),
+      entry: './lambda/buses/buses-0.ts',
+      handler: 'handler',
+      layers: [layer],
+      description: 'Query bus predictions.',
+      environment: {
+        SORT_KEY: 'id',
+        PARTITION_KEY: 'entity',
+        // HIST_SORT_KEY: 'archiveTime',
+        // HIST_PARTITION_KEY: 'id',
+        // USERNAME_SORT_KEY: 'username',
+        TABLE_NAME: metrolensTable.tableName,
+        // HIST_TABLE_NAME: metrolensHistTable.tableName,
+        // JWT_SECRET: String(process.env.JWT_SECRET),
+      },
+    })
+
     /* appsync: add lambda as a data source */
     const lambdaRegisterDataSource = graphql.addLambdaDataSource(
       'lambdaRegister',
@@ -213,7 +234,7 @@ export class MetroLensStack extends cdk.Stack {
       'testSubscriptionLambda',
       {
         code: lambda.Code.fromInline(
-          "exports.handler = (event, context) => { console.log(event); /* context.succeed(event)*/ return { name: 'Larry', age: '21' }; }"
+          "exports.handler = async (event, context) => { console.log({ event }); /* context.succeed(event)*/ const obj = { name: 'Larry', age: '21' }; console.log({ obj }); return obj }"
         ),
         runtime: lambda.Runtime.NODEJS_12_X,
         handler: 'index.handler',
@@ -222,12 +243,12 @@ export class MetroLensStack extends cdk.Stack {
 
     /* appsync: add lambda as a data source */
     const testSubscriptionDataSource = graphql.addLambdaDataSource(
-      'Test Subscription',
+      'lambdaTestSubscription',
       'Test Subscription Lambda',
       testSubscriptionLambda
     )
 
-    /* appsync:mutation response is handled by the lambda */
+    /* appsync: mutation response is handled by the lambda */
     testSubscriptionDataSource.createResolver({
       typeName: 'Mutation',
       fieldName: 'testMutation',
@@ -236,26 +257,41 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     /* appsync: add lambda as a data source */
-    const lambdaTestMutationDataSource = graphql.addDynamoDbDataSource(
-      'Test',
-      'Metro DynamoDB table',
-      metrolensTable
+    const busesDataSource = graphql.addLambdaDataSource(
+      'lambdaBuses',
+      'Query buses Lambda',
+      lambdaBuses
     )
+
+    /* appsync: mutation response is handled by the lambda */
+    busesDataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'updateBusPositions',
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    /* appsync: add dynamodb as a data source */
+    // const lambdaTestMutationDataSource = graphql.addDynamoDbDataSource(
+    //   'Test',
+    //   'Metro DynamoDB table',
+    //   metrolensTable
+    // )
 
     /* appsync: should query dynamodb by the partition key by the mutation 
       when the mutation is invoked */
-    lambdaTestMutationDataSource.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'testMutation',
-      requestMappingTemplate: appsync.MappingTemplate.dynamoDbPutItem(
-        appsync.PrimaryKey.partition('entity')
-          .is('bus')
-          .sort('id')
-          .is('predictions'),
-        appsync.Values.projecting('routes')
-      ),
-      responseMappingTemplate: appsync.MappingTemplate.dynamoDbResultItem(),
-    })
+    // lambdaTestMutationDataSource.createResolver({
+    //   typeName: 'Mutation',
+    //   fieldName: 'testMutation',
+    //   requestMappingTemplate: appsync.MappingTemplate.dynamoDbPutItem(
+    //     appsync.PrimaryKey.partition('entity')
+    //       .is('bus')
+    //       .sort('id')
+    //       .is('predictions'),
+    //     appsync.Values.projecting('routes')
+    //   ),
+    //   responseMappingTemplate: appsync.MappingTemplate.dynamoDbResultItem(),
+    // })
 
     /* -------------------------------------------------------------------------- */
     /*                               General lambdas                              */
@@ -287,6 +323,7 @@ export class MetroLensStack extends cdk.Stack {
         CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
         WMATA_KEY: String(process.env.WMATA_KEY),
         GRAPHQL_ENDPOINT: String(process.env.GRAPHQL_ENDPOINT),
+        GRAPHQL_API_KEY: String(process.env.GRAPHQL_API_KEY),
       },
     })
 
@@ -345,6 +382,7 @@ export class MetroLensStack extends cdk.Stack {
     /* grant the lambdas access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
     metrolensTable.grantReadWriteData(lambdaScribe)
+    metrolensTable.grantReadWriteData(lambdaBuses)
 
     /* grant the lambdas access to the dynamodb hist table */
     metrolensHistTable.grantWriteData(lambdaAuditor)

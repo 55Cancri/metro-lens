@@ -14,8 +14,8 @@ import { dateServiceProvider } from '../services/date'
 import { iamServiceProvider } from '../services/iam'
 
 /* import utils */
+import * as listUtils from '../utils/arrays'
 import * as objectUtils from '../utils/objects'
-import * as arrayUtils from '../utils/arrays'
 import * as UnicornUtils from '../utils/unicorns'
 
 const { winston } = UnicornUtils

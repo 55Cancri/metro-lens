@@ -1,0 +1,15 @@
+subscription onUpdateBusPositions {
+  onUpdateBusPositions {
+    vehicleId
+    rt
+    lat
+    lon
+    lastUpdateTime
+    predictions {
+      arrivalIn
+      arrivalTime
+      stopId
+      stopName
+    }
+  }
+}

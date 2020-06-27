@@ -106,7 +106,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   /* determine the vids of the inactive buses */
   const inactiveVehicleIds = Object.entries(statusOfBuses).reduce(
     (store, [key, bus]) =>
-      !bus.isActive && dateService.greaterThanMinsAgo(bus.wentOffline, 10)
+      !bus.isActive && dateService.elapsedMinsGreaterThan(bus.wentOffline, 10)
         ? [...store, key]
         : store,
     [] as string[]

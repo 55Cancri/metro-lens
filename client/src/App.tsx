@@ -23,9 +23,10 @@ const httpLink = createHttpLink({ uri: url })
 
 const authLink = createAuthLink({ url, region, auth })
 
-const subLink = createSubscriptionHandshakeLink(url, httpLink)
+const subscriptionLink = createSubscriptionHandshakeLink({ url, region, auth })
+// const subLink = createSubscriptionHandshakeLink(url, httpLink)
 
-const link = ApolloLink.from([authLink, subLink])
+const link = ApolloLink.from([authLink, subscriptionLink])
 
 const client = new ApolloClient({
   link,

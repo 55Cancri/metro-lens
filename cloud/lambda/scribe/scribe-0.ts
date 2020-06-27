@@ -29,6 +29,7 @@ aws.config.update({ region: 'us-east-1' })
 /* initialize the environment variables */
 const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
 const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || ''
+const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY || ''
 const MAX_DYNAMO_REQUESTS = 25
 
 /* define error constants */
@@ -223,8 +224,12 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
   /* log the size of the vehicle map */
   winston.info(
-    `Vehicle Size: ${unicornUtils.formatBytes(objectUtils.sizeOf(vehicleMap))}.`
+    `line 227: VehicleMap Size: ${unicornUtils.formatBytes(
+      objectUtils.sizeOf(vehicleMap)
+    )}.`
   )
+
+  console.log({ vehicleLength: vehicles.length })
 
   /* define a dynamodb item for the status of buses */
   const busStatusItem = dynamoService.generateItem({
@@ -245,6 +250,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   )
 
   /* define a dynamodb item for the bus predictions */
+  // TODO: chunk and do multiple saves
   const busPredictionsItem = dynamoService.generateItem({
     pk: 'bus',
     sk: 'predictions',
@@ -298,12 +304,19 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     dynamoService.write(busPredictionHistoryItem, { historyTable: true }),
   ])
 
-  unicornUtils.print(vehicleMap)
+  // unicornUtils.print(vehicleMap)
 
-  console.log('------INVOKING BUS POSITION MUTATION------')
+  // console.log('------INVOKING BUS POSITION MUTATION------')
 
-  await apiService.testMutation(GRAPHQL_ENDPOINT)
-  // await apiService.busPositionMutation(GRAPHQL_ENDPOINT, vehicleMap)
+  /**
+   * Invoke the busPosition mutation without providing any variables.
+   * The buses lambda will then query dynamodb and get the buses that
+   * have been updated within the last 5 minutes.
+   * The response of that lambda will then send that data to
+   * all frontend subscribers.
+   * */
+  const mutationParams = { endpoint: GRAPHQL_ENDPOINT, apiKey: GRAPHQL_API_KEY }
+  const mutationResult = await apiService.busPositionMutation(mutationParams)
 
   winston.info('Done.')
 }

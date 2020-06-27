@@ -11,7 +11,7 @@ import * as urls from '../constants/urls'
 import * as colors from '../constants/colors'
 import * as variants from '../constants/variants'
 import { useDimensions } from '../hooks/use-dimensions'
-import { useTestedMutationSubscription } from '../types/apollo-hooks'
+import * as apolloHooks from '../types/apollo-hooks'
 /**
  * Maps:
  * CartoDB.Voyager
@@ -74,11 +74,12 @@ export const DashboardPage: React.FC = () => {
     {}
   )
   const [mapLink, setMapLink] = React.useState('')
-  const subscription = useTestedMutationSubscription()
+  const busSubscription = apolloHooks.useOnUpdateBusPositionsSubscription()
+  const testSubscription = apolloHooks.useTestedMutationSubscription()
   // const [mapRef, mapDimensions] = useDimensions()
 
-  console.log('SUBSCRIPTION RESULTS')
-  console.log({ subscription })
+  console.log('BUS SUBSCRIPTION')
+  console.log({ busSubscription })
 
   /* initialize route history */
   const history = useHistory()
@@ -112,7 +113,7 @@ export const DashboardPage: React.FC = () => {
       console.log('Locating…')
       navigator.geolocation.getCurrentPosition(onSuccess, onError, {
         enableHighAccuracy: true,
-        timeout: 30 * 1000,
+        timeout: 10 * 1000,
         maximumAge: 0,
       })
     }

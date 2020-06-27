@@ -46,13 +46,20 @@ type LoginResponse {
 # type Map {
 # }
 
+type Prediction {
+  arrivalIn: String!
+  arrivalTime: String!
+  stopId: String!
+  stopName: String!
+}
+
 type Bus {
-  # pk
-  entity: String!
-  # sk
-  id: String!
-  # data
-  routes: String
+  vehicleId: String!
+  rt: String!
+  lat: String!
+  lon: String!
+  lastUpdateTime: String!
+  predictions: [Prediction!]!
 }
 
 type Test {
@@ -69,11 +76,11 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateBusPositions: String
+  updateBusPositions: [Bus!]
   testMutation: Test
 }
 
 type Subscription {
-  updatedBusPositions: String @aws_subscribe(mutations: ["updateBusPositions"])
+  onUpdateBusPositions: [Bus!] @aws_subscribe(mutations: ["updateBusPositions"])
   testedMutation: Test @aws_subscribe(mutations: ["testMutation"])
 }

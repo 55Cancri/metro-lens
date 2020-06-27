@@ -54,11 +54,22 @@ export type LoginResponse = {
   user: User
 }
 
+export type Prediction = {
+  __typename?: 'Prediction'
+  arrivalIn: Scalars['String']
+  arrivalTime: Scalars['String']
+  stopId: Scalars['String']
+  stopName: Scalars['String']
+}
+
 export type Bus = {
   __typename?: 'Bus'
-  entity: Scalars['String']
-  id: Scalars['String']
-  routes?: Maybe<Scalars['String']>
+  vehicleId: Scalars['String']
+  rt: Scalars['String']
+  lat: Scalars['String']
+  lon: Scalars['String']
+  lastUpdateTime: Scalars['String']
+  predictions: Array<Prediction>
 }
 
 export type Test = {
@@ -81,7 +92,7 @@ export type Mutation = {
   __typename?: 'Mutation'
   registerUser: LoginResponse
   loginUser: LoginResponse
-  updateBusPositions?: Maybe<Scalars['String']>
+  updateBusPositions?: Maybe<Array<Bus>>
   testMutation?: Maybe<Test>
 }
 
@@ -95,7 +106,7 @@ export type MutationLoginUserArgs = {
 
 export type Subscription = {
   __typename?: 'Subscription'
-  updatedBusPositions?: Maybe<Scalars['String']>
+  onUpdateBusPositions?: Maybe<Array<Bus>>
   testedMutation?: Maybe<Test>
 }
 
@@ -129,6 +140,28 @@ export type TestedMutationSubscriptionVariables = {}
 
 export type TestedMutationSubscription = { __typename?: 'Subscription' } & {
   testedMutation?: Maybe<{ __typename?: 'Test' } & Pick<Test, 'name' | 'age'>>
+}
+
+export type OnUpdateBusPositionsSubscriptionVariables = {}
+
+export type OnUpdateBusPositionsSubscription = {
+  __typename?: 'Subscription'
+} & {
+  onUpdateBusPositions?: Maybe<
+    Array<
+      { __typename?: 'Bus' } & Pick<
+        Bus,
+        'vehicleId' | 'rt' | 'lat' | 'lon' | 'lastUpdateTime'
+      > & {
+          predictions: Array<
+            { __typename?: 'Prediction' } & Pick<
+              Prediction,
+              'arrivalIn' | 'arrivalTime' | 'stopId' | 'stopName'
+            >
+          >
+        }
+    >
+  >
 }
 
 export const LoginUserDocument = gql`
@@ -273,4 +306,54 @@ export type TestedMutationSubscriptionHookResult = ReturnType<
 >
 export type TestedMutationSubscriptionResult = ApolloReactCommon.SubscriptionResult<
   TestedMutationSubscription
+>
+export const OnUpdateBusPositionsDocument = gql`
+  subscription onUpdateBusPositions {
+    onUpdateBusPositions {
+      vehicleId
+      rt
+      lat
+      lon
+      lastUpdateTime
+      predictions {
+        arrivalIn
+        arrivalTime
+        stopId
+        stopName
+      }
+    }
+  }
+`
+
+/**
+ * __useOnUpdateBusPositionsSubscription__
+ *
+ * To run a query within a React component, call `useOnUpdateBusPositionsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnUpdateBusPositionsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnUpdateBusPositionsSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnUpdateBusPositionsSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    OnUpdateBusPositionsSubscription,
+    OnUpdateBusPositionsSubscriptionVariables
+  >
+) {
+  return ApolloReactHooks.useSubscription<
+    OnUpdateBusPositionsSubscription,
+    OnUpdateBusPositionsSubscriptionVariables
+  >(OnUpdateBusPositionsDocument, baseOptions)
+}
+export type OnUpdateBusPositionsSubscriptionHookResult = ReturnType<
+  typeof useOnUpdateBusPositionsSubscription
+>
+export type OnUpdateBusPositionsSubscriptionResult = ApolloReactCommon.SubscriptionResult<
+  OnUpdateBusPositionsSubscription
 >

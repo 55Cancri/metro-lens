@@ -37,10 +37,20 @@ type LoginResponse {
   user: User!
 }
 
+type Prediction {
+  arrivalIn: String!
+  arrivalTime: String!
+  stopId: String!
+  stopName: String!
+}
+
 type Bus {
-  entity: String!
-  id: String!
-  routes: String
+  vehicleId: String!
+  rt: String!
+  lat: String!
+  lon: String!
+  lastUpdateTime: String!
+  predictions: [Prediction!]!
 }
 
 type Test {
@@ -56,11 +66,11 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateBusPositions: String
+  updateBusPositions: [Bus!]
   testMutation: Test
 }
 
 type Subscription {
-  updatedBusPositions: String
+  onUpdateBusPositions: [Bus!]
   testedMutation: Test
 }

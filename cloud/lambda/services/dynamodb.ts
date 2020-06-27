@@ -169,6 +169,8 @@ export const dynamoServiceProvider = ({
 
     const prevBusRoutes = Item?.routes ?? {}
 
+    console.log('Hey There !')
+
     /* return the expected results */
     return { prevBusRoutes, apiCalls: 0 }
   }
@@ -242,11 +244,11 @@ export const dynamoServiceProvider = ({
     /* get the map */
     const map = Item?.map ?? []
 
-    console.log('Map dynamodb - Items:')
-    console.log(Items?.length ?? 0)
+    // console.log('Map dynamodb - Items:')
+    // console.log(Items?.length ?? 0)
 
-    console.log('Map dynamodb - .map:')
-    console.log(map?.length ?? 0)
+    // console.log('Map dynamodb - .map:')
+    // console.log(map?.length ?? 0)
 
     /* return the expected results */
     return { map, dbMapApiCount: 0 }
@@ -316,7 +318,7 @@ export const dynamoServiceProvider = ({
     }
     const { Items } = await dynamodb.query(params).promise()
 
-    return (<Dynamo.BusStatusItem[]>Items)?.filter(isActiveRoute)
+    return (Items as Dynamo.BusStatusItem[])?.filter(isActiveRoute)
   }
 
   const getVehiclesOfActiveBuses = async (
