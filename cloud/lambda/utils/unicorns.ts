@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import logger from 'winston'
 import * as dfz from 'date-fns-timezone'
 import util from 'util'
+import * as objectUtils from './objects'
 
 // @ts-ignore
 import { format as SAFE_format } from 'logform/dist/browser'
@@ -23,6 +24,13 @@ export const formatBytes = (bytes: number, decimals = 2) => {
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
+
+/**
+ * Log the size of a value in KB - TB+.
+ * @param object
+ */
+export const printObjectSize = (object: unknown) =>
+  formatBytes(objectUtils.sizeOf(object))
 
 const myFormat = format.printf(({ level, message, label, timestamp }) => {
   const now = dfz.formatToTimeZone(

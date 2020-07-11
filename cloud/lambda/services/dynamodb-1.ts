@@ -1,15 +1,16 @@
-import * as Iam from '../types/iam'
-import * as Dynamo from '../types/dynamodb'
-import { winston } from '../utils/unicorns'
+import * as Iam from "../types/iam"
+import * as Dynamo from "../types/dynamodb"
+import { winston } from "../utils/unicorns"
+import * as listUtils from "../utils/lists"
 
 /* define environment variables */
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const HIST_TABLE_NAME = process.env.HIST_TABLE_NAME || ''
-const SORT_KEY = process.env.SORT_KEY || ''
-const PARTITION_KEY = process.env.PARTITION_KEY || ''
-const HIST_SORT_KEY = process.env.HIST_SORT_KEY || ''
-const HIST_PARTITION_KEY = process.env.HIST_PARTITION_KEY || ''
-const USERNAME_SORT_KEY = process.env.USERNAME_SORT_KEY || ''
+const TABLE_NAME = process.env.TABLE_NAME || ""
+const HIST_TABLE_NAME = process.env.HIST_TABLE_NAME || ""
+const SORT_KEY = process.env.SORT_KEY || ""
+const PARTITION_KEY = process.env.PARTITION_KEY || ""
+const HIST_SORT_KEY = process.env.HIST_SORT_KEY || ""
+const HIST_PARTITION_KEY = process.env.HIST_PARTITION_KEY || ""
+const USERNAME_SORT_KEY = process.env.USERNAME_SORT_KEY || ""
 
 /**
  * The primary keys are:
@@ -28,7 +29,7 @@ const USERNAME_SORT_KEY = process.env.USERNAME_SORT_KEY || ''
  */
 export const dynamoServiceProvider = ({
   dynamodb,
-  dateService,
+  date,
 }: Dynamo.DynamoServiceProviderProps) => {
   type DynamoOptions = { historyTable?: boolean; usernameIndex?: boolean }
 
@@ -62,7 +63,7 @@ export const dynamoServiceProvider = ({
     }
 
     const Item = generateItem({
-      pk: 'user',
+      pk: "user",
       sk: user.email,
       uuid: user.uuid,
       email: user.email,
@@ -86,15 +87,15 @@ export const dynamoServiceProvider = ({
     /* return the params object */
     const getParams = (sortKeyValue: string, options?: Options) => {
       /* determine if user local secondary index should be used */
-      const withIndex = options?.useIndex ? { IndexName: 'usernameIndex' } : {}
+      const withIndex = options?.useIndex ? { IndexName: "usernameIndex" } : {}
       const sortKeyName = options?.useIndex ? USERNAME_SORT_KEY : SORT_KEY
 
       return {
         ...withIndex,
         TableName: TABLE_NAME,
-        KeyConditionExpression: '#pk = :pk AND #sk = :sk',
-        ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': sortKeyName },
-        ExpressionAttributeValues: { ':pk': 'user', ':sk': sortKeyValue },
+        KeyConditionExpression: "#pk = :pk AND #sk = :sk",
+        ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": sortKeyName },
+        ExpressionAttributeValues: { ":pk": "user", ":sk": sortKeyValue },
       } as Dynamo.QueryParams
     }
 
@@ -122,6 +123,21 @@ export const dynamoServiceProvider = ({
     return {} as Dynamo.User
   }
 
+  const getPredictionParams = (predictionSet: number) => {
+    return {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "#pk = :pk AND #sk = :sk",
+      ExpressionAttributeNames: {
+        "#pk": PARTITION_KEY,
+        "#sk": SORT_KEY,
+      },
+      ExpressionAttributeValues: {
+        ":pk": "bus",
+        ":sk": `predictions-${predictionSet}`,
+      },
+    }
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                         Auditor and Scribe lambdas                         */
   /* -------------------------------------------------------------------------- */
@@ -129,11 +145,12 @@ export const dynamoServiceProvider = ({
   const getStatusOfBuses = async () => {
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk = :sk',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'bus', ':sk': 'status' },
+      KeyConditionExpression: "#pk = :pk AND #sk = :sk",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
+      ExpressionAttributeValues: { ":pk": "bus", ":sk": "status" },
     }
 
+    // TODO: { dormant: { ... }, active: { ... } }
     type BusStatus = {
       entity: string
       id: string
@@ -148,18 +165,16 @@ export const dynamoServiceProvider = ({
     const [results] = Items as BusStatus[]
 
     /* determine the status of the buses */
+    // TODO: change to results.active & results.dormant
     const statusOfBuses = results?.status ?? {}
 
+    // TODO: { dormant, active, routeApiCount }
     return { statusOfBuses, routeApiCount: 0 }
   }
 
-  const getBusPredictions = async () => {
-    const params = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk = :sk',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'bus', ':sk': 'predictions' },
-    }
+  const getBusPredictions = async (predictionSet?: number) => {
+    /* get the first prediction set */
+    const params = getPredictionParams(0)
 
     /* query dynamodb */
     const { Items } = await dynamodb.query(params).promise()
@@ -167,21 +182,69 @@ export const dynamoServiceProvider = ({
     /* extract the stop data */
     const [Item] = Items as Dynamo.BusesByRouteId[]
 
-    const prevBusRoutes = Item?.routes ?? {}
+    /**
+     * This conditional happens when the buses lambda queries by
+     * the page number it receives
+     */
+    if (!predictionSet) {
+      const prevBusRoutes = Item?.routes ?? {}
 
-    console.log('Hey There !')
+      /* return the expected results */
+      return { prevBusRoutes, apiCalls: 0 }
+    }
 
-    /* return the expected results */
-    return { prevBusRoutes, apiCalls: 0 }
+    /**
+     * Get the total prediction sets from the item, which is determined
+     * in the scribe lambda by the length of the vehicles list chunked
+     * into groups of 7.
+     * */
+    const { totalPredictionSets } = Item
+
+    if (totalPredictionSets && totalPredictionSets > 1) {
+      type Routes = Dynamo.BusesByRouteId["routes"]
+
+      const predictionSets = listUtils.createList(totalPredictionSets)
+
+      const prevBusRoutes = (await predictionSets.reduce(
+        async (store, _, i) => {
+          /* wait for the promise to resolve */
+          const routes = (await store) as Routes
+
+          /* we already queried the first prediction above so skip it */
+          if (i === 0) return routes
+
+          /* get the params for each prediction set */
+          const params = getPredictionParams(i)
+
+          /* query dynamodb */
+          const { Items } = await dynamodb.query(params).promise()
+
+          /* extract the stop data */
+          const [Item] = Items as Dynamo.BusesByRouteId[]
+
+          /* get the bus routes */
+          const prevBusRoutes = Item?.routes ?? {}
+
+          return { ...routes, ...prevBusRoutes }
+        },
+        Promise.resolve({}) as Promise<Routes>
+      )) as Routes
+
+      /* return the expected results */
+      return { prevBusRoutes, apiCalls: 0 }
+    }
+
+    /* return empty results */
+    return { prevBusRoutes: {}, apiCalls: 0 }
   }
 
   const getStops = async () => {
     /* the stops are grouped by route id */
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'stop', ':skv': 'route_id_' },
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :skv)",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
+      ExpressionAttributeValues: { ":pk": "stop", ":skv": "route_id_" },
     }
 
     type Stop = {
@@ -214,9 +277,9 @@ export const dynamoServiceProvider = ({
   const getMaps = async () => {
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'route', ':skv': 'map_' },
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :skv)",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
+      ExpressionAttributeValues: { ":pk": "route", ":skv": "map_" },
     }
 
     type Map = {
@@ -227,7 +290,7 @@ export const dynamoServiceProvider = ({
           stopId?: string
           stopName?: string
           sequence: number
-          type: 'stop' | 'waypoint'
+          type: "stop" | "waypoint"
           routeDirection: string
           lat: string
           lon: string
@@ -263,7 +326,7 @@ export const dynamoServiceProvider = ({
    * @param routeObject routeObject - the data of a specific route in dynamodb
    */
   const isActiveRoute = (routeObject: Dynamo.BusStatusItem) => {
-    const hoursSinceLastCheck = dateService.getDifferenceInHours(
+    const hoursSinceLastCheck = date.getDifferenceInHours(
       new Date(),
       new Date(Number(routeObject.lastChecked))
     )
@@ -277,12 +340,12 @@ export const dynamoServiceProvider = ({
   const getApiCountToday = async () => {
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk BETWEEN :date1 AND :date2',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
+      KeyConditionExpression: "#pk = :pk AND #sk BETWEEN :date1 AND :date2",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
       ExpressionAttributeValues: {
-        ':pk': 'api_counter',
-        ':date1': dateService.getStartOfDay(),
-        ':date2': dateService.getEndOfDay(),
+        ":pk": "api_counter",
+        ":date1": date.getStartOfDay(),
+        ":date2": date.getEndOfDay(),
       },
     }
     const { Items } = await dynamodb.query(params).promise()
@@ -293,9 +356,9 @@ export const dynamoServiceProvider = ({
   const getApiCountTotal = async () => {
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND #sk = :skv',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'api_count', ':skv': 'total' },
+      KeyConditionExpression: "#pk = :pk AND #sk = :skv",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
+      ExpressionAttributeValues: { ":pk": "api_count", ":skv": "total" },
     }
 
     const { Items } = await dynamodb.query(params).promise()
@@ -312,9 +375,9 @@ export const dynamoServiceProvider = ({
   const getStatusOfActiveBuses = async () => {
     const params = {
       TableName: TABLE_NAME,
-      KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-      ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
-      ExpressionAttributeValues: { ':pk': 'bus', ':skv': 'status' },
+      KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :skv)",
+      ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
+      ExpressionAttributeValues: { ":pk": "bus", ":skv": "status" },
     }
     const { Items } = await dynamodb.query(params).promise()
 
@@ -336,11 +399,11 @@ export const dynamoServiceProvider = ({
         const { Items } = await dynamodb
           .query({
             TableName: TABLE_NAME,
-            KeyConditionExpression: '#pk = :pk AND begins_with(#sk, :skv)',
-            ExpressionAttributeNames: { '#pk': PARTITION_KEY, '#sk': SORT_KEY },
+            KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :skv)",
+            ExpressionAttributeNames: { "#pk": PARTITION_KEY, "#sk": SORT_KEY },
             ExpressionAttributeValues: {
-              ':pk': 'bus',
-              ':skv': `v0_${activeBus.vehicleId}`,
+              ":pk": "bus",
+              ":skv": `v0_${activeBus.vehicleId}`,
             },
           })
           .promise()

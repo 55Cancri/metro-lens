@@ -6,10 +6,10 @@ globals:
   jest/globals: true
 
 # no import keyword errors
-parser: '@typescript-eslint/parser'
+parser: "@typescript-eslint/parser"
 
 plugins:
-  - '@typescript-eslint'
+  - "@typescript-eslint"
   - jest
 
 extends:
@@ -33,12 +33,14 @@ extends:
 rules:
   semi: 0
   # stupid rule
-  '@typescript-eslint/explicit-function-return-type': off
+  "@typescript-eslint/explicit-function-return-type": off
   # must be turned off for typescript version to work
   no-unused-expressions": off
   # better version of no-undef with optional chaining support
-  '@typescript-eslint/no-unused-expressions': error
+  "@typescript-eslint/no-unused-expressions": error
   # no semi-colons needed in types
-  '@typescript-eslint/member-delimiter-style': off
-  '@typescript-eslint/ban-ts-ignore': off
-  '@typescript-eslint/camelcase': off
+  "@typescript-eslint/member-delimiter-style": off
+  "@typescript-eslint/ban-ts-ignore": off
+  "@typescript-eslint/camelcase": off
+  # allow use of the non-null assertion operator
+  "@typescript-eslint/no-non-null-assertion": off

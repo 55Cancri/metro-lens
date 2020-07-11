@@ -3,6 +3,7 @@
     "noEmit": true,
     "target": "ES2015",
     "module": "commonjs",
+    "skipDefaultLibCheck": true,
     "skipLibCheck": true,
     "lib": ["DOM", "ES2020", "ESNext"],
     "declaration": false,

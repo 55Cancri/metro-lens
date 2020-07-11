@@ -1,29 +1,29 @@
-import * as aws from 'aws-sdk'
-import * as lambda from 'aws-lambda'
-import axios from 'axios'
-import * as R from 'ramda'
-import * as Rx from 'rxjs'
-import * as Op from 'rxjs/operators'
+import * as aws from "aws-sdk"
+import * as lambda from "aws-lambda"
+import axios from "axios"
+import * as R from "ramda"
+import * as Rx from "rxjs"
+import * as Op from "rxjs/operators"
 
-import { apiServiceProvider } from '../services/api'
-import { dynamoServiceProvider } from '../services/dynamodb'
-import { dateServiceProvider } from '../services/date'
+import { apiServiceProvider } from "../services/api-1"
+import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { dateServiceProvider } from "../services/date"
 
-import * as arrayUtils from '../utils/arrays'
-import { winston } from '../utils/unicorns'
-import { busMocks } from '../mocks/buses'
+import * as arrayUtils from "../utils/lists"
+import { winston } from "../utils/unicorns"
+import { busMocks } from "../mocks/buses"
 
-import * as Dynamo from '../types/dynamodb'
-import * as Api from '../types/api'
+import * as Dynamo from "../types/dynamodb"
+import * as Api from "../types/api"
 
 /* ensure the dynamo table is in the correct region */
-aws.config.update({ region: 'us-east-1' })
+aws.config.update({ region: "us-east-1" })
 
 /* initialize the environment variables */
-const TABLE_NAME = process.env.TABLE_NAME || ''
-const PARTITION_KEY = process.env.PARTITION_KEY || ''
-const SORT_KEY = process.env.SORT_KEY || ''
-const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
+const TABLE_NAME = process.env.TABLE_NAME || ""
+const PARTITION_KEY = process.env.PARTITION_KEY || ""
+const SORT_KEY = process.env.SORT_KEY || ""
+const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ""
 const MAX_DYNAMO_REQUESTS = 25
 
 /* define error constants */
@@ -35,14 +35,14 @@ const dynamodb = new aws.DynamoDB.DocumentClient()
 
 /* define the handler */
 export const handler = async (event?: lambda.APIGatewayEvent) => {
-  winston.info('Start.')
+  winston.info("Start.")
 
   /* initialize services */
   // !NOTE: do not instantiate these here.
   // !Do so in a wrapper for the lambda so they can be injected
-  const dateService = dateServiceProvider()
+  const date = dateServiceProvider()
   const apiService = apiServiceProvider({ httpClient: axios })
-  const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
+  const dynamoService = dynamoServiceProvider({ dynamodb, date })
 
   /* get the total number of api calls saved to dynamodb */
   const prevApiCountTotal = await dynamoService.getApiCountTotal()
@@ -63,7 +63,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   )
 
   /* get the vehicleIds of the active buses */
-  const vehicleIds = statusOfActiveBuses.map(R.prop('vehicleId'))
+  const vehicleIds = statusOfActiveBuses.map(R.prop("vehicleId"))
 
   // winston.info({ vehicleIds })
 
@@ -92,8 +92,8 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const batchedVehicleIds: Api.HttpClientConnectorParams[] = chunkedVehicleIds.map(
     (vehicleIdArray) => ({
       key: CONNECTOR_KEY,
-      format: 'json',
-      vid: vehicleIdArray.join(','),
+      format: "json",
+      vid: vehicleIdArray.join(","),
     })
   )
 
@@ -107,14 +107,14 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   const apiCountTotal = Number(prevApiCountTotal) + apiCount
 
   /* define a timestamp */
-  const timestamp = dateService.getNowInISO()
+  const timestamp = date.getNowInISO()
 
   /* define a type narrowing function */
   const isSuccessItem = (
     item: Api.ConnectorJoin | Api.ConnectorError
   ): item is Api.ConnectorJoin => {
     /* use a random property from the success response */
-    if ('stpid' in item) return true
+    if ("stpid" in item) return true
     return false
   }
 
@@ -135,7 +135,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     if (isSuccessItem(item)) {
       // define the primary key of the vehicle item to be saved,
       const primaryKey = dynamoService.generateItem({
-        pk: 'bus',
+        pk: "bus",
         sk: `v0_${item.vid}_${item.stpid}`,
       })
 
@@ -167,18 +167,18 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
 
   /* define a dynamo item for the number of api calls just made */
   const recentApiCountItem = dynamoService.generateItem({
-    pk: 'api_counter',
-    sk: dateService.getNowInISO(),
-    calledBy: 'scribe',
+    pk: "api_counter",
+    sk: date.getNowInISO(),
+    calledBy: "scribe",
     apiCount,
   })
 
   /* define a dynamo item for the total number of api calls */
   const totalApiCountItem = dynamoService.generateItem({
-    pk: 'api_counter',
-    sk: 'total',
-    lastUpdatedBy: 'scribe',
-    lastUpdated: dateService.getNowInISO(),
+    pk: "api_counter",
+    sk: "total",
+    lastUpdatedBy: "scribe",
+    lastUpdated: date.getNowInISO(),
     apiCountTotal,
   })
 
@@ -201,7 +201,7 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
     chunkedBusItems.map(dynamoService.batchWrite)
   )
 
-  winston.info('Done.')
+  winston.info("Done.")
 
   /* wmata buses */
   // const wmata = await axios.get(

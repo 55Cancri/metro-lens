@@ -1,8 +1,8 @@
-import axios from 'axios'
+import axios from "axios"
 
 export type HttpClientConnectorParams = {
   key?: string
-  format?: 'json'
+  format?: "json"
   stpid?: string
   StopID?: string
   rt_dir?: string
@@ -103,7 +103,7 @@ export type ConnectorApiPattern = {
     pt: {
       stpid?: string
       stpnm?: string
-      typ: 'S' | 'W'
+      typ: "S" | "W"
       seq: number
       lat: number
       lon: number
@@ -118,12 +118,12 @@ export type ConnectorApiRoute = {
 }
 
 export type ConnectorApiPrediction = {
-  prd: ConnectorPrediction[]
+  prd?: ConnectorPrediction[]
   error: ConnectorError[]
 }
 
 export type ConnectorApiVehicle = {
-  vehicle: ConnectorVehicle[]
+  vehicle?: ConnectorVehicle[]
   error: ConnectorError[]
 }
 
@@ -132,7 +132,7 @@ export type ConnectorPredictionOrError = ConnectorPrediction | ConnectorError
 
 export type ConnectorApiBase<T> = {
   data: {
-    'bustime-response': T & { error?: ConnectorError[] }
+    "bustime-response": T & { error?: ConnectorError[] }
   }
 }
 

@@ -12,14 +12,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@tensorflow/tfjs-node-gpu": "^1.7.3",
-    "aws-sdk": "^2.658.0",
+    "aws-sdk": "^2.706.0",
     "copy-dynamodb-table": "^2.0.20",
-    "date-fns": "^2.12.0",
-    "date-fns-timezone": "^0.1.4"
+    "date-fns": "^2.14.0",
+    "date-fns-timezone": "^0.1.4",
+    "ramda": "^0.27.0"
   },
   "devDependencies": {
-    "@types/node": "^13.13.0",
-    "typescript": "^3.8.3"
+    "@types/node": "^14.0.14",
+    "@types/ramda": "^0.27.6",
+    "typescript": "^3.9.5"
   }
 }

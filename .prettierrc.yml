@@ -1,5 +1,5 @@
 # .prettierrc or .prettierrc.yaml
 tabWidth: 2
 semi: false
-singleQuote: true
+singleQuote: false
 arrowParens: 'always'

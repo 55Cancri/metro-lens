@@ -1,6 +1,6 @@
 import * as Api from '../types/api'
 import { winston } from '../utils/unicorns'
-import * as arrayUtils from '../utils/arrays'
+import * as arrayUtils from '../utils/lists'
 
 const URLS = {
   connector: {
@@ -376,12 +376,15 @@ export const apiServiceProvider = ({
     // )
   }
 
-  const busPositionMutation = (params: Record<'endpoint' | 'apiKey', string>) =>
+  const busPositionMutation = (
+    params: Record<'endpoint' | 'apiKey', string>,
+    predictionSet: number
+  ) =>
     httpClient.post(
       params.endpoint,
       {
-        query: `mutation updateBusPositions {
-          updateBusPositions {
+        query: `mutation updateBusPositions($page: Int) {
+          updateBusPositions(page: $page) {
               vehicleId
               rt
               lat
@@ -395,6 +398,7 @@ export const apiServiceProvider = ({
               }
           }
       }`,
+        variables: { input: { predictionSet } },
       },
       {
         headers: {

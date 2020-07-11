@@ -12,6 +12,7 @@ import * as appsync from '@aws-cdk/aws-appsync'
 import * as cloudwatch from '@aws-cdk/aws-cloudwatch'
 import * as cloudwatchActions from '@aws-cdk/aws-cloudwatch-actions'
 import * as cloudfront from '@aws-cdk/aws-cloudfront'
+import * as logs from '@aws-cdk/aws-logs'
 import * as events from '@aws-cdk/aws-events'
 import * as targets from '@aws-cdk/aws-events-targets'
 import * as route53 from '@aws-cdk/aws-route53'
@@ -137,6 +138,7 @@ export class MetroLensStack extends cdk.Stack {
       handler: 'handler',
       layers: [layer],
       description: 'Register a user.',
+      logRetention: logs.RetentionDays.FIVE_DAYS,
       environment: {
         SORT_KEY: 'id',
         HIST_SORT_KEY: 'archiveTime',
@@ -157,6 +159,7 @@ export class MetroLensStack extends cdk.Stack {
       entry: './lambda/login/login-0.ts',
       handler: 'handler',
       layers: [layer],
+      logRetention: logs.RetentionDays.FIVE_DAYS,
       description: 'Login a user.',
       environment: {
         SORT_KEY: 'id',
@@ -178,6 +181,7 @@ export class MetroLensStack extends cdk.Stack {
       entry: './lambda/buses/buses-0.ts',
       handler: 'handler',
       layers: [layer],
+      logRetention: logs.RetentionDays.FIVE_DAYS,
       description: 'Query bus predictions.',
       environment: {
         SORT_KEY: 'id',
@@ -311,6 +315,7 @@ export class MetroLensStack extends cdk.Stack {
       // handler: 'metro-polling.handler',
       /* include reuseable node modles */
       layers: [layer],
+      logRetention: logs.RetentionDays.FIVE_DAYS,
       description:
         'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
       environment: {
@@ -350,6 +355,7 @@ export class MetroLensStack extends cdk.Stack {
       /* include reuseable node modles */
       layers: [layer],
       timeout: cdk.Duration.seconds(120),
+      logRetention: logs.RetentionDays.FIVE_DAYS,
       description: 'Ensure all vehicle ids are present in the database.',
       environment: {
         SORT_KEY: 'id',

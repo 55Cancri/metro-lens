@@ -1,30 +1,30 @@
 /* register-0 is always the most recent version */
-import * as aws from 'aws-sdk'
-import * as bcrypt from 'bcryptjs'
-import { v4 as uuidv4 } from 'uuid'
-import * as jwt from 'jsonwebtoken'
+import * as aws from "aws-sdk"
+import * as bcrypt from "bcryptjs"
+import { v4 as uuidv4 } from "uuid"
+import * as jwt from "jsonwebtoken"
 
 /* import services */
-import { apiServiceProvider } from '../services/api'
-import { iamServiceProvider } from '../services/iam'
-import { dynamoServiceProvider } from '../services/dynamodb'
-import { dateServiceProvider } from '../services/date'
+import { apiServiceProvider } from "../services/api-1"
+import { iamServiceProvider } from "../services/iam"
+import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { dateServiceProvider } from "../services/date"
 
 /* import utils */
-import * as objectUtils from '../utils/objects'
-import * as arrayUtils from '../utils/arrays'
-import * as UnicornUtils from '../utils/unicorns'
+import * as objectUtils from "../utils/objects"
+import * as arrayUtils from "../utils/lists"
+import * as UnicornUtils from "../utils/unicorns"
 
 const { winston } = UnicornUtils
 
 /* import types */
-import * as Misc from '../types/misc'
-import * as Iam from '../types/iam'
-import * as Dynamo from '../types/dynamodb'
-import * as Api from '../types/api'
+import * as Misc from "../types/misc"
+import * as Iam from "../types/iam"
+import * as Dynamo from "../types/dynamodb"
+import * as Api from "../types/api"
 
 /* ensure the dynamo table is in the correct region */
-aws.config.update({ region: 'us-east-1' })
+aws.config.update({ region: "us-east-1" })
 
 /* define error constants */
 const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
@@ -38,9 +38,9 @@ export const handler = async (
   event?: Misc.AppsyncEvent<Iam.ClientRegister>
 ) => {
   /* // TODO: initialize services in separate file */
-  const dateService = dateServiceProvider()
+  const date = dateServiceProvider()
   const iamService = iamServiceProvider({ iam: jwt })
-  const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
+  const dynamoService = dynamoServiceProvider({ dynamodb, date })
 
   if (!objectUtils.objectIsEmpty(event) && event?.arguments.input) {
     /* extract credentials provided by the client */
@@ -63,7 +63,7 @@ export const handler = async (
       objectUtils.objectIsEmpty(emailCheck)
     ) {
       /* timestamp the creation date */
-      const now = dateService.getNowInISO()
+      const now = date.getNowInISO()
       const dateCreated = now
       const lastSignOn = now
 
@@ -93,8 +93,8 @@ export const handler = async (
       return { user: newUser, accessToken }
     }
 
-    throw new Error('User already exists.')
+    throw new Error("User already exists.")
   }
 
-  throw new Error('Server error.')
+  throw new Error("Server error.")
 }

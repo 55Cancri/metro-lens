@@ -72,7 +72,7 @@ run_tests () {
 
     else
       # notify of skipped unit tests
-      echo -e "\033[37;1mSkipping unit tests\033[0m $beach \n"
+      echo -e "\n\033[37;1mSkipping unit tests\033[0m $beach \n"
   fi 
 }
 

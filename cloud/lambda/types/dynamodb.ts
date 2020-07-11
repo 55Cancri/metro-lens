@@ -1,5 +1,5 @@
-import aws from 'aws-sdk'
-import { dateServiceProvider } from '../services/date'
+import aws from "aws-sdk"
+import { dateServiceProvider } from "../services/date"
 
 type PrimaryKey = {
   entity: string
@@ -65,6 +65,7 @@ export type Prediction = {
 export type BusesByRouteId = {
   entity: string
   id: string
+  totalPredictionSets?: number
   routes: {
     [key: string]: {
       lat: string
@@ -92,7 +93,7 @@ export type QueryParams = aws.DynamoDB.DocumentClient.QueryInput
 
 export type DynamoServiceProviderProps = {
   dynamodb: aws.DynamoDB.DocumentClient
-  dateService: ReturnType<typeof dateServiceProvider>
+  date: ReturnType<typeof dateServiceProvider>
 }
 
 // export type DynamoResponse<T> = Omit<

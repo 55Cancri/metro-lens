@@ -15,6 +15,10 @@ input LoginInput {
   password: String!
 }
 
+input BusInput {
+  predictionSet: Int!
+}
+
 type FavoriteStop {
   stopId: String!
   stopName: String!
@@ -76,7 +80,7 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateBusPositions: [Bus!]
+  updateBusPositions(input: BusInput!): [Bus!]
   testMutation: Test
 }
 

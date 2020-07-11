@@ -1,322 +1,193 @@
-/* scribe-0 is always the most recent version */
-import * as aws from 'aws-sdk'
-import * as lambda from 'aws-lambda'
-import axios from 'axios'
-import * as R from 'ramda'
-import * as Rx from 'rxjs'
-import * as Op from 'rxjs/operators'
+import * as lambda from "aws-lambda"
+import { winston } from "../utils/unicorns"
 
-/* import services */
-import { apiServiceProvider } from '../services/api'
-import { dynamoServiceProvider } from '../services/dynamodb'
-import { dateServiceProvider } from '../services/date'
+// import all utils
+import * as utils from "./utils"
+import * as objectUtils from "../utils/objects"
+import * as listUtils from "../utils/lists"
 
-/* import utils */
-import * as objectUtils from '../utils/objects'
-import * as arrayUtils from '../utils/arrays'
-import * as unicornUtils from '../utils/unicorns'
-import { busMocks } from '../mocks/buses'
+// import types
+import { Deps } from "./handler"
+import * as Api from "../types/api"
 
-const { winston } = unicornUtils
+/* define the constants */
+const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ""
+const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || ""
+const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY || ""
 
-/* import types */
-import * as Dynamo from '../types/dynamodb'
-import * as Api from '../types/api'
+export const scribe = (deps: Deps) => async (
+  event?: lambda.APIGatewayEvent
+) => {
+  /* extract the dependencies */
+  const { dynamodb, api, date } = deps
 
-/* ensure the dynamo table is in the correct region */
-aws.config.update({ region: 'us-east-1' })
-
-/* initialize the environment variables */
-const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ''
-const GRAPHQL_ENDPOINT = process.env.GRAPHQL_ENDPOINT || ''
-const GRAPHQL_API_KEY = process.env.GRAPHQL_API_KEY || ''
-const MAX_DYNAMO_REQUESTS = 25
-
-/* define error constants */
-const RESERVED_RESPONSE = `Error: You're using AWS reserved keywords as attributes`
-const DYNAMODB_EXECUTION_ERROR = `Error: Execution update, caused a Dynamodb error, please take a look at your CloudWatch Logs.`
-
-/* setup dynamodb client */
-const dynamodb = new aws.DynamoDB.DocumentClient()
-
-/* define the handler */
-export const handler = async (event?: lambda.APIGatewayEvent) => {
-  winston.info('Starting.')
-
-  /* initialize services */
-  // !NOTE: do not instantiate these here.
-  // !Do so in a wrapper for the lambda so they can be injected
-  const dateService = dateServiceProvider()
-  const apiService = apiServiceProvider({ httpClient: axios })
-  const dynamoService = dynamoServiceProvider({ dynamodb, dateService })
-
-  /* get the active buses current saved in dynamodb */
-  const statusPromise = dynamoService.getStatusOfBuses()
-
-  /* query for buses by route_id */
-  const busesPromise = dynamoService.getBusPredictions()
-
-  /* get the total number of api calls saved to dynamodb */
-  const prevApiCountPromise = dynamoService.getApiCountTotal()
-
-  /* wait for dynamo queries to finish */
-  const [status, buses, prevApiCountTotal] = await Promise.all([
-    statusPromise,
-    busesPromise,
-    prevApiCountPromise,
-  ])
-
-  /* extract the previous bus predictions: entity - "bus", id - "route_id"  */
-  const { prevBusRoutes } = buses
+  /* get the status item */
+  const previousVehicleStatusItem = await dynamodb.getVehicleStatus()
 
   /* define the api params in case the api call needs to be made */
-  const params = { key: CONNECTOR_KEY, format: 'json' } as const
+  const params = { key: CONNECTOR_KEY, format: "json" } as const
 
-  /* if no buses are active, it likely means db is empty, so call api again */
-  const { statusOfBuses, routeApiCount } = !objectUtils.objectIsEmpty(
-    status.statusOfBuses
-  )
-    ? status
-    : await apiService.getActiveVehicles(params)
+  const vehicleStatus = objectUtils.objectIsEmpty(previousVehicleStatusItem)
+    ? await api.getActiveVehicles(params)
+    : previousVehicleStatusItem
 
-  /* convert the keys, which are vehicle ids, into an array */
-  /* NOTE: active vehicles will become less and less overtime */
-  /* the auditor will rehydrate it every 30 minutes, or how about a yang? */
-  /* every 1 minute, active vehicles are called (errors set to false), and */
-  /* every 15 minutes, false vehicles are api called. */
-  const activeVehicleIds = Object.entries(statusOfBuses).reduce(
-    (store, [key, bus]) => (bus.isActive ? [...store, key] : store),
-    [] as string[]
-  )
+  const { statusOfVehicles, routeApiCount } = vehicleStatus
 
-  /* batch the vehicles into arrays of 10 */
-  const chunkedVehicleIds = arrayUtils.chunk(activeVehicleIds, 10)
+  /* extract the active and dormant prediction sets */
+  const { active, dormant } = statusOfVehicles
 
-  const vehiclesToBeUpdated = chunkedVehicleIds.map((listOfVehicleIds, i) => ({
-    [`api set ${i}${1}`]: listOfVehicleIds.join(','),
-  }))
+  /* flatten the active and dormant vehicle status' */
+  const flatActiveStatus = utils.flattenStatusItem(active)
+  const flatDormantStatus = utils.flattenStatusItem(dormant)
 
-  winston.info(
-    `The following vehicles will be updated: ${JSON.stringify(
-      vehiclesToBeUpdated
-    )}`
-  )
+  /* flatten the vehicle status */
+  const flatVehicleStatus = { ...flatActiveStatus, ...flatDormantStatus }
 
-  /* create an array of the api parameter objects for the api calls */
-  const batchedVehicleIds: Api.HttpClientConnectorParams[] = chunkedVehicleIds.map(
-    (listOfVehicleIds) => ({
-      key: CONNECTOR_KEY,
-      format: 'json',
-      vid: listOfVehicleIds.join(','),
-    })
-  )
+  /* get the vehicle ids of the active vehicles */
+  const activeVehicleIds = utils.getVehicleIds(flatVehicleStatus)
 
-  /* kick off a call for the vehicles */
-  /* convert [ { vehicle: [ { vid: 2101 } ] }, ... ] -> [ { vid: 2101 }, ... ] */
-  const vehiclesPromise = Promise.all(
-    batchedVehicleIds.map(apiService.getVehicles)
-  ).then((data) =>
-    data.reduce((store, vehicle) => {
-      if (vehicle.vehicle && vehicle.error) {
-        return [...store, ...vehicle.vehicle, ...vehicle.error]
-      }
+  /* chunk the vehicle ids into lengths of 10, the limit in a single api call */
+  const chunkedVehicleIds = listUtils.chunk(activeVehicleIds, 10)
 
-      if (vehicle.vehicle) {
-        return [...store, ...vehicle.vehicle]
-      }
+  /* convert the api calls into api param objects */
+  const batchedVehicleParams = utils.getApiParams(chunkedVehicleIds)
 
-      return [...store, ...vehicle.error]
-    }, [] as Api.ConnectorVehicleOrError[])
-  )
+  /* get the vehicle location for each batch of vehicle ids */
+  const vehiclesPromise = utils.getApiResponse(
+    api,
+    batchedVehicleParams
+  ) as Promise<Api.ConnectorVehicleOrError[]>
 
-  /* kick off a call for the predictions */
-  /* convert [ { prd: [ { vid: 2101 } ] }, ... ] -> [ { vid: 2101 }, ... ] */
-  const predictionsPromise = Promise.all(
-    batchedVehicleIds.map(apiService.getPredictions)
-  ).then((data) =>
-    data.reduce((store, vehicle) => {
-      if (vehicle.prd && vehicle.error) {
-        return [...store, ...vehicle.prd, ...vehicle.error]
-      }
+  /* get the vehicle predictions for each batch of vehicle ids */
+  const predictionsPromise = utils.getApiResponse(
+    api,
+    batchedVehicleParams
+  ) as Promise<Api.ConnectorPredictionOrError[]>
 
-      if (vehicle.prd) {
-        return [...store, ...vehicle.prd]
-      }
-
-      return [...store, ...vehicle.error]
-    }, [] as Api.ConnectorPredictionOrError[])
-  )
-
-  /* wait for the calls to finish */
+  /* wait for the vehicle and prediction responses to come in */
   const [vehicles, predictions] = await Promise.all([
-    await vehiclesPromise,
-    await predictionsPromise,
+    vehiclesPromise,
+    predictionsPromise,
   ])
+
+  /* create the active and dormant vehicle status */
+  const activeVehicleStatus = utils.getVehicleStatus(
+    vehicles,
+    flatVehicleStatus,
+    flatActiveStatus
+  )
+  const dormantVehicleStatus = utils.getVehicleStatus(
+    vehicles,
+    flatVehicleStatus,
+    flatDormantStatus
+  )
+
+  /* create the vehicle status item */
+  const vehicleStatusItem = {
+    entity: "vehicle",
+    id: "status",
+    active: activeVehicleStatus,
+    dormant: dormantVehicleStatus,
+  }
+
+  /* create the predictions map */
+  const predictionMap = utils.createPredictionMap(predictions, { date })
+
+  /* get the array of prediction items */
+  const predictionItems = await dynamodb.getVehiclePredictions()
+
+  /*create a timestamp for the current moment */
+  const lastUpdateTime = date.getNowInISO()
 
   /* determine the number of api calls made */
-  const vehicleApiCount = batchedVehicleIds.length
-  const predictionsApiCount = batchedVehicleIds.length
+  const vehicleApiCount = chunkedVehicleIds.length
+  const predictionsApiCount = chunkedVehicleIds.length
 
-  /* count the total number of api calls made */
+  /* get the total number of api calls made */
+  const previousApiTotal = await dynamodb.getApiCountTotal()
+
+  /* sum up all of the api calls */
   const apiCount = routeApiCount + vehicleApiCount + predictionsApiCount
-  const apiCountTotal = Number(prevApiCountTotal) + apiCount
+  const apiCountTotal = Number(previousApiTotal) + apiCount
 
-  winston.info(
-    `Api Calls :: Routes: ${routeApiCount}. Vehicles: ${vehicleApiCount}. Predictions: ${predictionsApiCount}.`
-  )
+  const recentApiCountConfig = {
+    pk: "api_count_history",
+    sk: date.getNowInISO(),
+    calledBy: "scribe",
+    apiCount,
+    TTL: date.setTTLExpirationIn({ years: 1 }),
+  }
 
-  /* any vehicles that returned an error from the vehicle api call will be set to false */
-  const busStatusMap = vehicles.reduce(
-    (store, vehicle) =>
-      'msg' in vehicle
-        ? {
-            ...store,
-            [vehicle.vid]: {
-              isActive: false,
-              wentOffline: new Date().toISOString(),
-            },
-          }
-        : { ...store, [vehicle.vid]: { isActive: true, wentOffline: null } },
-    statusOfBuses
-  )
-
-  const predictionsMap = predictions.reduce((store, prediction) => {
-    if ('msg' in prediction) {
-      winston.warn(`Bus ${prediction.vid} has gone offline.`)
-
-      return store
-    }
-
-    const { rt, vid, stpid, stpnm, prdtm, prdctdn } = prediction
-
-    const key = `${rt}_${vid}`
-
-    const arrivalIn = /due/i.test(prdctdn) ? '0' : prdctdn
-
-    const arrivalTime = dateService.parsePredictedTime(prdtm)
-
-    const eta = { arrivalIn, arrivalTime, stopName: stpnm, stopId: stpid }
-
-    if (store[key]) {
-      return { ...store, [key]: [...store[key], eta] }
-    }
-
-    return { ...store, [key]: [eta] }
-  }, {} as Record<string, unknown[]>)
-
-  const lastUpdateTime = dateService.getNowInISO()
-
-  const vehicleMap = vehicles.reduce((store, vehicle) => {
-    if ('msg' in vehicle) {
-      return store
-    }
-
-    const { rt, vid: vehicleId, lat, lon } = vehicle
-
-    const key = `${rt}_${vehicleId}`
-
-    const predictions = predictionsMap[key] as Dynamo.Prediction[]
-
-    const data = { rt, lat, lon, vehicleId, predictions, lastUpdateTime }
-
-    return { ...store, [key]: data }
-  }, prevBusRoutes)
-
-  /* log the size of the vehicle map */
-  winston.info(
-    `line 227: VehicleMap Size: ${unicornUtils.formatBytes(
-      objectUtils.sizeOf(vehicleMap)
-    )}.`
-  )
-
-  console.log({ vehicleLength: vehicles.length })
-
-  /* define a dynamodb item for the status of buses */
-  const busStatusItem = dynamoService.generateItem({
-    pk: 'bus',
-    sk: 'status',
-    status: busStatusMap,
-  })
-
-  /* define a dynamodb item to keep track of the historical status of buses */
-  const busStatusHistoryItem = dynamoService.generateItem(
-    {
-      pk: 'bus_status_history',
-      sk: dateService.getNowInISO(),
-      status: busStatusMap,
-      TTL: dateService.setTTLExpirationIn({ minutes: 2 }),
-    },
-    { historyTable: true }
-  )
-
-  /* define a dynamodb item for the bus predictions */
-  // TODO: chunk and do multiple saves
-  const busPredictionsItem = dynamoService.generateItem({
-    pk: 'bus',
-    sk: 'predictions',
-    routes: vehicleMap,
-  })
-
-  /* define a dynamodb item to keep track of the historical bus predictions */
-  const busPredictionHistoryItem = dynamoService.generateItem(
-    {
-      pk: 'bus_predictions_history',
-      sk: dateService.getNowInISO(),
-      routes: vehicleMap,
-      TTL: dateService.setTTLExpirationIn({ days: 1 }),
-    },
-    { historyTable: true }
-  )
-
-  /* define a dynamodb item for the number of api calls just made */
-  const recentApiCountItem = dynamoService.generateItem(
-    {
-      pk: 'api_count_history',
-      sk: dateService.getNowInISO(),
-      calledBy: 'scribe',
-      apiCount,
-      TTL: dateService.setTTLExpirationIn({ years: 1 }),
-    },
-    { historyTable: true }
-  )
-
-  /* define a dynamodb item for the total number of api calls */
-  const totalApiCountItem = dynamoService.generateItem({
-    pk: 'api_count',
-    sk: 'total',
-    lastUpdatedBy: 'scribe',
-    lastUpdated: dateService.getNowInISO(),
+  const totalApiCountConfig = {
+    pk: "api_count",
+    sk: "total",
+    lastUpdatedBy: "scribe",
+    lastUpdated: date.getNowInISO(),
     apiCountTotal,
+  }
+
+  const apiCallSummary = `Api Calls :: Routes: ${routeApiCount}. Vehicles: ${vehicleApiCount}. Predictions: ${predictionsApiCount}.`
+
+  winston.info(apiCallSummary)
+
+  /* update the total api calls in the main table */
+  const totalApiCountItem = dynamodb.createItem(totalApiCountConfig)
+
+  /* add a new entry in the history table for the recent number of api calls */
+  const recentApiCountItem = dynamodb.createHistoryItem(recentApiCountConfig)
+
+  /* save the api counts */
+  const saveTotalApiCounts = dynamodb.writeItem(totalApiCountItem)
+  const saveRecentApiCounts = dynamodb.writeHistoryItem(recentApiCountItem)
+
+  await Promise.all([saveTotalApiCounts, saveRecentApiCounts])
+
+  /* iterate and update each prediction item */
+  predictionItems.map(async (item, i) => {
+    /* define the prediction item number starting at 1 */
+    const predictionItemId = i + 1
+
+    /* create a new vehicle item from the old and new vehicles */
+    const vehicleStruct = utils.createVehicleStruct(predictionMap, {
+      currentVehicles: vehicles,
+      pastVehicles: item,
+      lastUpdateTime,
+    })
+
+    /* create a new prediction item */
+    const config = {
+      pk: "prediction",
+      sk: predictionItemId,
+      routes: vehicleStruct,
+    }
+
+    /* create a historical record of the prediction item */
+    const historyConfig = {
+      pk: "vehicle_predictions_history",
+      sk: date.getNowInISO(),
+      id: predictionItemId,
+      routes: vehicleStruct,
+      // routes: vehicleMap,
+      TTL: date.setTTLExpirationIn({ days: 1 }),
+    }
+
+    /* create the items */
+    const vehicleItem = dynamodb.createItem(config)
+    const vehicleHistoryItem = dynamodb.createHistoryItem(historyConfig)
+
+    /* save the items */
+    const saveVehicle = dynamodb.writeItem(vehicleItem)
+    const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
+
+    const mutationParams = {
+      endpoint: GRAPHQL_ENDPOINT,
+      apiKey: GRAPHQL_API_KEY,
+    }
+    const mutationResult = api.triggerVehicleMutation(
+      mutationParams,
+      predictionItemId
+    )
+
+    return Promise.all([saveVehicle, saveHistory, mutationResult])
   })
-
-  /* save items to dynamodb */
-  await Promise.all([
-    /* api counts */
-    dynamoService.write(totalApiCountItem),
-    dynamoService.write(recentApiCountItem, { historyTable: true }),
-
-    /* bus status */
-    dynamoService.write(busStatusItem),
-    dynamoService.write(busStatusHistoryItem, { historyTable: true }),
-
-    /* bus predictions */
-    dynamoService.write(busPredictionsItem),
-    dynamoService.write(busPredictionHistoryItem, { historyTable: true }),
-  ])
-
-  // unicornUtils.print(vehicleMap)
-
-  // console.log('------INVOKING BUS POSITION MUTATION------')
-
-  /**
-   * Invoke the busPosition mutation without providing any variables.
-   * The buses lambda will then query dynamodb and get the buses that
-   * have been updated within the last 5 minutes.
-   * The response of that lambda will then send that data to
-   * all frontend subscribers.
-   * */
-  const mutationParams = { endpoint: GRAPHQL_ENDPOINT, apiKey: GRAPHQL_API_KEY }
-  const mutationResult = await apiService.busPositionMutation(mutationParams)
-
-  winston.info('Done.')
 }

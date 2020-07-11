@@ -1,9 +1,6 @@
 import * as df from 'date-fns'
 import * as dfz from 'date-fns-timezone'
 import { listTimeZones } from 'timezone-support'
-import * as tf from '@tensorflow/tfjs'
-
-const model = tf.sequential()
 
 const greaterThanMinsAgo = (offlineDateInISO: string | null, mins = 45) =>
   typeof offlineDateInISO === 'string' &&
@@ -41,6 +38,6 @@ const date2 = new Date()
 
 const dates = [date1]
 
-const bool = df.isSameDay(...dates)
+// const bool = df.isSameDay()
 
-bool
+// bool
