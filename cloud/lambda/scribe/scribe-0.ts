@@ -22,6 +22,8 @@ export const scribe = (deps: Deps) => async (
   /* extract the dependencies */
   const { dynamodb, api, date } = deps
 
+  /* ------------------ update the status of active vehicles ------------------ */
+
   /* get the status item */
   const previousVehicleStatusItem = await dynamodb.getVehicleStatus()
 
@@ -84,12 +86,15 @@ export const scribe = (deps: Deps) => async (
   )
 
   /* create the vehicle status item */
-  const vehicleStatusItem = {
-    entity: "vehicle",
-    id: "status",
+  const vehicleStatusItem = dynamodb.createItem({
+    pk: "vehicle",
+    sk: "status",
     active: activeVehicleStatus,
     dormant: dormantVehicleStatus,
-  }
+  })
+  const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
+
+  /* ----------- update predictions and locations of active vehicles ---------- */
 
   /* create the predictions map */
   const predictionMap = scribeUtils.createPredictionMap(predictions, { date })
@@ -99,49 +104,6 @@ export const scribe = (deps: Deps) => async (
 
   /*create a timestamp for the current moment */
   const lastUpdateTime = date.getNowInISO()
-
-  /* determine the number of api calls made */
-  const vehicleApiCount = chunkedVehicleIds.length
-  const predictionsApiCount = chunkedVehicleIds.length
-
-  /* get the historical total number of api calls made */
-  const previousApiTotal = await dynamodb.getApiCountTotal()
-
-  /* sum up all of the api calls */
-  const apiCount = routeApiCount + vehicleApiCount + predictionsApiCount
-  const apiCountTotal = Number(previousApiTotal) + apiCount
-
-  const recentApiCountConfig = {
-    pk: "api_count_history",
-    sk: date.getNowInISO(),
-    calledBy: "scribe",
-    apiCount,
-    TTL: date.setTTLExpirationIn({ years: 1 }),
-  }
-
-  const totalApiCountConfig = {
-    pk: "api_count",
-    sk: "total",
-    lastUpdatedBy: "scribe",
-    lastUpdated: date.getNowInISO(),
-    apiCountTotal,
-  }
-
-  const apiCallSummary = `Api Calls :: Routes: ${routeApiCount}. Vehicles: ${vehicleApiCount}. Predictions: ${predictionsApiCount}.`
-
-  winston.info(apiCallSummary)
-
-  /* update the total api calls in the main table */
-  const totalApiCountItem = dynamodb.createItem(totalApiCountConfig)
-
-  /* add a new entry in the history table for the recent number of api calls */
-  const recentApiCountItem = dynamodb.createHistoryItem(recentApiCountConfig)
-
-  /* save the api counts */
-  const saveTotalApiCounts = dynamodb.writeItem(totalApiCountItem)
-  const saveRecentApiCounts = dynamodb.writeHistoryItem(recentApiCountItem)
-
-  await Promise.all([saveTotalApiCounts, saveRecentApiCounts])
 
   /* iterate and update each prediction item */
   predictionItems.map(async (item, i) => {
@@ -156,29 +118,23 @@ export const scribe = (deps: Deps) => async (
     })
 
     /* create a new prediction item */
-    const config = {
+    const vehicleItem = dynamodb.createItem({
       pk: "prediction",
       sk: predictionItemId,
       routes: vehicleStruct,
-    }
-
-    /* create a historical record of the prediction item */
-    const historyConfig = {
+    })
+    const vehicleHistoryItem = dynamodb.createHistoryItem({
       pk: "vehicle_predictions_history",
       sk: date.getNowInISO(),
       id: predictionItemId,
       routes: vehicleStruct,
       // routes: vehicleMap,
       TTL: date.setTTLExpirationIn({ days: 1 }),
-    }
-
-    /* create the items */
-    const vehicleItem = dynamodb.createItem(config)
-    const vehicleHistoryItem = dynamodb.createHistoryItem(historyConfig)
-
-    /* save the items */
+    })
     const saveVehicle = dynamodb.writeItem(vehicleItem)
     const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
+
+    /* ---------------------- trigger the graphql mutation ---------------------- */
 
     const mutationParams = {
       endpoint: GRAPHQL_ENDPOINT,
@@ -188,7 +144,37 @@ export const scribe = (deps: Deps) => async (
       mutationParams,
       predictionItemId
     )
-
     return Promise.all([saveVehicle, saveHistory, mutationResult])
   })
+
+  /* ---------------------- count the number of api calls --------------------- */
+
+  const vehicleApiCount = chunkedVehicleIds.length
+  const predictionsApiCount = chunkedVehicleIds.length
+  const previousApiTotal = await dynamodb.getApiCountTotal()
+  const sessionApiCount = routeApiCount + vehicleApiCount + predictionsApiCount
+  const totalApiCount = Number(previousApiTotal) + sessionApiCount
+  // const apiCallSummary = `Api Calls :: Routes: ${routeApiCount}. Vehicles: ${vehicleApiCount}. Predictions: ${predictionsApiCount}.`
+  // winston.info(apiCallSummary)
+  const totalApiCountItem = dynamodb.createItem({
+    pk: "api_count",
+    sk: "total",
+    lastUpdatedBy: "scribe",
+    lastUpdated: date.getNowInISO(),
+    apiCountTotal: totalApiCount,
+  })
+  const recentApiCountItem = dynamodb.createHistoryItem({
+    pk: "api_count_history",
+    sk: date.getNowInISO(),
+    calledBy: "scribe",
+    apiCount: sessionApiCount,
+    TTL: date.setTTLExpirationIn({ years: 1 }),
+  })
+  const saveTotalApiCounts = dynamodb.writeItem(totalApiCountItem)
+  const saveRecentApiCounts = dynamodb.writeHistoryItem(recentApiCountItem)
+  await Promise.all([
+    saveVehicleStatus,
+    saveTotalApiCounts,
+    saveRecentApiCounts,
+  ])
 }

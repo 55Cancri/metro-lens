@@ -54,19 +54,19 @@ export const auditor = (deps: Deps) => async (
 
   /* check if any of those vehicles are now back online */
   const awakenedVehiclesId = auditorUtils.getAwakenedVehicleIds(vehicles)
-  const activeVehicleStatusItem = auditorUtils.getVehicleStatusItem(
+  const activeVehicleStatus = auditorUtils.getVehicleStatusItem(
     awakenedVehiclesId,
     { flatVehicleStatus, initialVehicleStatus: active }
   )
-  const dormantVehicleStatusItem = auditorUtils.getVehicleStatusItem(
+  const dormantVehicleStatus = auditorUtils.getVehicleStatusItem(
     awakenedVehiclesId,
     { flatVehicleStatus, initialVehicleStatus: dormant }
   )
   const vehicleStatusItem = dynamodb.createItem({
     pk: "vehicle",
     sk: "status",
-    active: activeVehicleStatusItem,
-    dormant: dormantVehicleStatusItem,
+    active: activeVehicleStatus,
+    dormant: dormantVehicleStatus,
   })
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
