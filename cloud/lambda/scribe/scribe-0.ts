@@ -1,13 +1,14 @@
 import * as lambda from "aws-lambda"
 import { winston } from "../utils/unicorns"
 
-// import all utils
-import * as utils from "./utils"
+/* import utils */
+import * as apiUtils from "../utils/api"
 import * as objectUtils from "../utils/objects"
 import * as listUtils from "../utils/lists"
+import * as scribeUtils from "./utils"
 
-// import types
-import { Deps } from "./handler"
+/* import types */
+import { Deps } from "../depency-injector"
 import * as Api from "../types/api"
 
 /* define the constants */
@@ -37,29 +38,29 @@ export const scribe = (deps: Deps) => async (
   const { active, dormant } = statusOfVehicles
 
   /* flatten the active and dormant vehicle status' */
-  const flatActiveStatus = utils.flattenStatusItem(active)
-  const flatDormantStatus = utils.flattenStatusItem(dormant)
+  const flatActiveStatus = scribeUtils.flattenStatusItem(active)
+  const flatDormantStatus = scribeUtils.flattenStatusItem(dormant)
 
   /* flatten the vehicle status */
   const flatVehicleStatus = { ...flatActiveStatus, ...flatDormantStatus }
 
   /* get the vehicle ids of the active vehicles */
-  const activeVehicleIds = utils.getVehicleIds(flatVehicleStatus)
+  const activeVehicleIds = scribeUtils.getVehicleIds(flatVehicleStatus)
 
   /* chunk the vehicle ids into lengths of 10, the limit in a single api call */
   const chunkedVehicleIds = listUtils.chunk(activeVehicleIds, 10)
 
   /* convert the api calls into api param objects */
-  const batchedVehicleParams = utils.getApiParams(chunkedVehicleIds)
+  const batchedVehicleParams = apiUtils.getApiParams(chunkedVehicleIds)
 
   /* get the vehicle location for each batch of vehicle ids */
-  const vehiclesPromise = utils.getApiResponse(
+  const vehiclesPromise = scribeUtils.getApiResponse(
     api,
     batchedVehicleParams
   ) as Promise<Api.ConnectorVehicleOrError[]>
 
   /* get the vehicle predictions for each batch of vehicle ids */
-  const predictionsPromise = utils.getApiResponse(
+  const predictionsPromise = scribeUtils.getApiResponse(
     api,
     batchedVehicleParams
   ) as Promise<Api.ConnectorPredictionOrError[]>
@@ -71,12 +72,12 @@ export const scribe = (deps: Deps) => async (
   ])
 
   /* create the active and dormant vehicle status */
-  const activeVehicleStatus = utils.getVehicleStatus(
+  const activeVehicleStatus = scribeUtils.getVehicleStatus(
     vehicles,
     flatVehicleStatus,
     flatActiveStatus
   )
-  const dormantVehicleStatus = utils.getVehicleStatus(
+  const dormantVehicleStatus = scribeUtils.getVehicleStatus(
     vehicles,
     flatVehicleStatus,
     flatDormantStatus
@@ -91,7 +92,7 @@ export const scribe = (deps: Deps) => async (
   }
 
   /* create the predictions map */
-  const predictionMap = utils.createPredictionMap(predictions, { date })
+  const predictionMap = scribeUtils.createPredictionMap(predictions, { date })
 
   /* get the array of prediction items */
   const predictionItems = await dynamodb.getVehiclePredictions()
@@ -103,7 +104,7 @@ export const scribe = (deps: Deps) => async (
   const vehicleApiCount = chunkedVehicleIds.length
   const predictionsApiCount = chunkedVehicleIds.length
 
-  /* get the total number of api calls made */
+  /* get the historical total number of api calls made */
   const previousApiTotal = await dynamodb.getApiCountTotal()
 
   /* sum up all of the api calls */
@@ -148,7 +149,7 @@ export const scribe = (deps: Deps) => async (
     const predictionItemId = i + 1
 
     /* create a new vehicle item from the old and new vehicles */
-    const vehicleStruct = utils.createVehicleStruct(predictionMap, {
+    const vehicleStruct = scribeUtils.createVehicleStruct(predictionMap, {
       currentVehicles: vehicles,
       pastVehicles: item,
       lastUpdateTime,

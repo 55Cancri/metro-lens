@@ -7,8 +7,8 @@ import * as Rx from "rxjs"
 import * as Op from "rxjs/operators"
 
 /* import services */
-import { apiServiceProvider } from "../services/api-1"
-import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { apiServiceProvider } from "../services/api/api-1"
+import { dynamoServiceProvider } from "../services/dynamodb/dynamodb-1"
 import { dateServiceProvider } from "../services/date"
 
 /* import utils */
@@ -20,8 +20,8 @@ import { busMocks } from "../mocks/buses"
 const { winston } = unicornUtils
 
 /* import types */
-import * as Dynamo from "../types/dynamodb"
-import * as Api from "../types/api"
+import * as Dynamo from "../services/dynamodb/types"
+import * as Api from "../services/api/types"
 
 /* ensure the dynamo table is in the correct region */
 aws.config.update({ region: "us-east-1" })

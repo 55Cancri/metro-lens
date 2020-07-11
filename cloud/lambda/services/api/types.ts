@@ -130,7 +130,41 @@ export type ConnectorApiBase<T> = {
   }
 }
 
+export type BaseConnectorApiDirection = {
+  "bustime-response": ConnectorApiDirection & { error?: ConnectorError[] }
+}
+
+export type BaseConnectorApiPattern = {
+  "bustime-response": ConnectorApiPattern & { error?: ConnectorError[] }
+}
+
 export type ConnectorMerged = {
   data: ConnectorJoin[]
   errors: ConnectorError[]
+}
+
+export type RouteDirection = {
+  rt: string
+  dir: string
+  rt_dir: string | undefined
+}
+
+export type MarkerPattern = {
+  stopId?: string
+  stopName?: string
+  lat: number
+  lon: number
+  type: any
+  sequence: number
+  routeDirection: string
+}
+
+export type MarkerItem = { key: string; map: MarkerPattern[] }
+
+export type VehicleStop = {
+  routeId: string
+  stopName: string
+  stopId: string
+  lat: number
+  lon: number
 }

@@ -5,8 +5,8 @@ import axios from "axios"
 import { promises as fs } from "fs"
 
 /* import services */
-import { apiServiceProvider } from "../services/api-1"
-import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { apiServiceProvider } from "../services/api/api-1"
+import { dynamoServiceProvider } from "../services/dynamodb/dynamodb-1"
 import { dateServiceProvider } from "../services/date"
 
 /* import utils */
@@ -377,3 +377,5 @@ export const handler = async (event?: lambda.APIGatewayEvent) => {
   /* log completion */
   winston.info("Done.")
 }
+
+export {}

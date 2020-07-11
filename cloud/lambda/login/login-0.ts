@@ -8,8 +8,8 @@ import * as bcrypt from "bcryptjs"
 // import * as Op from 'rxjs/operators'
 
 /* import services */
-import { apiServiceProvider } from "../services/api-1"
-import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { apiServiceProvider } from "../services/api/api-1"
+import { dynamoServiceProvider } from "../services/dynamodb/dynamodb-1"
 import { dateServiceProvider } from "../services/date"
 import { iamServiceProvider } from "../services/iam"
 

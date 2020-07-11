@@ -1,11 +1,9 @@
 import * as Api from "../types/api"
-import * as Dynamo from "./../services/dynamodb-0"
-import { Deps } from "./handler"
+import * as Dynamo from "../services/dynamodb/types"
+import { Deps } from "../depency-injector"
 import * as unicornUtils from "../utils/unicorns"
 
 const { winston } = unicornUtils
-
-const CONNECTOR_KEY = process.env.CONNECTOR_KEY || ""
 
 type PredictionMap = Record<string, Dynamo.Prediction[]>
 
@@ -70,19 +68,6 @@ export const getVehicleIds = (flatStatus: Dynamo.PredictionIdStatus) => {
     [] as string[]
   )
 }
-
-/**
- * Create api params for each ten item chunk of vehicle items.
- * @param chunkedVehicleIds
- */
-export const getApiParams = (
-  chunkedVehicleIds: string[][]
-): Api.HttpClientConnectorParams[] =>
-  chunkedVehicleIds.map((listOfVehicleIds) => ({
-    key: CONNECTOR_KEY,
-    format: "json",
-    vid: listOfVehicleIds.join(","),
-  }))
 
 /**
  * Get the API responses for a list of vehicle ids.

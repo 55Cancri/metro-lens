@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from "uuid"
 import * as jwt from "jsonwebtoken"
 
 /* import services */
-import { apiServiceProvider } from "../services/api-1"
+import { apiServiceProvider } from "../services/api/api-1"
 import { iamServiceProvider } from "../services/iam"
-import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { dynamoServiceProvider } from "../services/dynamodb/dynamodb-1"
 import { dateServiceProvider } from "../services/date"
 
 /* import utils */

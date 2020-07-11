@@ -1,17 +1,17 @@
-import * as Api from '../types/api'
-import { winston } from '../utils/unicorns'
-import * as arrayUtils from '../utils/lists'
+import * as Api from "./types"
+import { winston } from "../../utils/unicorns"
+import * as arrayUtils from "../../utils/lists"
 
 const URLS = {
   connector: {
-    stops: 'https://www.fairfaxcounty.gov/bustime/api/v3/getstops',
-    routes: 'https://www.fairfaxcounty.gov/bustime/api/v3/getroutes',
-    patterns: 'https://www.fairfaxcounty.gov/bustime/api/v3/getpatterns',
-    predictions: 'https://www.fairfaxcounty.gov/bustime/api/v3/getpredictions',
-    directions: 'https://www.fairfaxcounty.gov/bustime/api/v3/getdirections',
-    vehicles: 'https://www.fairfaxcounty.gov/bustime/api/v3/getvehicles',
+    stops: "https://www.fairfaxcounty.gov/bustime/api/v3/getstops",
+    routes: "https://www.fairfaxcounty.gov/bustime/api/v3/getroutes",
+    patterns: "https://www.fairfaxcounty.gov/bustime/api/v3/getpatterns",
+    predictions: "https://www.fairfaxcounty.gov/bustime/api/v3/getpredictions",
+    directions: "https://www.fairfaxcounty.gov/bustime/api/v3/getdirections",
+    vehicles: "https://www.fairfaxcounty.gov/bustime/api/v3/getvehicles",
   },
-  wmata: { Predictions: '' },
+  wmata: { Predictions: "" },
 } as const
 
 const joinById = ({ lists, key }: { lists: any[][]; key: string }): any[] =>
@@ -37,44 +37,44 @@ export const apiServiceProvider = ({
   const getVehicles = async (params: Api.HttpClientConnectorParams) =>
     httpClient
       .get(URLS.connector.vehicles, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
-      .then(({ data }) => data['bustime-response'] as Api.ConnectorApiVehicle)
+      .then(({ data }) => data["bustime-response"] as Api.ConnectorApiVehicle)
       .catch((error) => {
         winston.error(error)
-        throw new Error('Vehicles Api Error')
+        throw new Error("Vehicles Api Error")
       })
 
   /* get vehicle predictions */
   const getPredictions = async (params: Api.HttpClientConnectorParams) =>
     httpClient
       .get(URLS.connector.predictions, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
       .then(
-        ({ data }) => data['bustime-response'] as Api.ConnectorApiPrediction
+        ({ data }) => data["bustime-response"] as Api.ConnectorApiPrediction
       )
       .catch((error) => {
         winston.error(error)
-        throw new Error('Predictions Api Error')
+        throw new Error("Predictions Api Error")
       })
 
   /* get vehicle predictions */
   const getEveryRoute = async (params: Api.HttpClientConnectorParams) =>
     httpClient
       .get(URLS.connector.routes, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
       .then(({ data }) => ({
-        data: data['bustime-response'] as Api.ConnectorApiRoute,
+        data: data["bustime-response"] as Api.ConnectorApiRoute,
         routeApiCount: 1,
       }))
       .catch((error) => {
         winston.error(error)
-        throw new Error('Routes Api Error')
+        throw new Error("Routes Api Error")
       })
 
   /* get stop */
@@ -84,11 +84,11 @@ export const apiServiceProvider = ({
   }: Api.HttpClientConnectorParams) =>
     httpClient
       .get(URLS.connector.stops, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
       .then(({ data }) => {
-        const { stops } = data['bustime-response'] as Api.ConnectorApiStop
+        const { stops } = data["bustime-response"] as Api.ConnectorApiStop
         const { rt } = params
         return stops.map(({ stpid, stpnm, lat, lon }) => ({
           routeId: rt_dir ? rt_dir : rt!,
@@ -100,7 +100,7 @@ export const apiServiceProvider = ({
       })
       .catch((error) => {
         winston.error(error)
-        throw new Error('Stop Api Error')
+        throw new Error("Stop Api Error")
       })
 
   const getDirectionsForEveryRoute = async (
@@ -111,7 +111,7 @@ export const apiServiceProvider = ({
       routes.map(({ rt }) =>
         httpClient
           .get(URLS.connector.directions, {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
             params: { ...params, rt },
           })
           .then(({ data }) => {
@@ -122,7 +122,7 @@ export const apiServiceProvider = ({
             }
 
             const { directions } = data[
-              'bustime-response'
+              "bustime-response"
             ] as Api.ConnectorApiDirection
 
             return directions.reduce(
@@ -143,7 +143,7 @@ export const apiServiceProvider = ({
           })
           .catch((error) => {
             winston.error(error)
-            throw new Error('Directions Api Error')
+            throw new Error("Directions Api Error")
           })
       )
     ).then((routeDirections) => ({
@@ -169,15 +169,15 @@ export const apiServiceProvider = ({
 
       const { data } = await httpClient
         .get(URLS.connector.patterns, {
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
           params: { ...params, rt },
         })
         .catch((error) => {
           winston.error(error)
-          throw new Error('Patterns Api Error')
+          throw new Error("Patterns Api Error")
         })
 
-      const { ptr } = data['bustime-response'] as Api.ConnectorApiPattern
+      const { ptr } = data["bustime-response"] as Api.ConnectorApiPattern
 
       const mapList = ptr.reduce((store, { pt, rtdir }) => {
         const key = `map_${rt}_${rtdir}`
@@ -192,7 +192,7 @@ export const apiServiceProvider = ({
         const routeMap = pt.map(({ typ, lat, lon, seq, stpid, stpnm }) => ({
           lat,
           lon,
-          type: /s/i.test(typ) ? 'stop' : 'waypoint',
+          type: /s/i.test(typ) ? "stop" : "waypoint",
           sequence: seq,
           routeDirection: rtdir,
           ...(stpnm ? { stopName: stpnm } : {}),
@@ -307,18 +307,18 @@ export const apiServiceProvider = ({
     const connectorUrls = URLS.connector
     const vehiclesPromise = httpClient
       .get(connectorUrls.vehicles, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
-      .then(({ data }) => data['bustime-response'] as Api.ConnectorApiVehicle)
+      .then(({ data }) => data["bustime-response"] as Api.ConnectorApiVehicle)
 
     const predictionsPromise = httpClient
       .get(connectorUrls.predictions, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
         params,
       })
       .then(
-        ({ data }) => data['bustime-response'] as Api.ConnectorApiPrediction
+        ({ data }) => data["bustime-response"] as Api.ConnectorApiPrediction
       )
 
     const [vehicles, predictions] = await Promise.all([
@@ -377,7 +377,7 @@ export const apiServiceProvider = ({
   }
 
   const busPositionMutation = (
-    params: Record<'endpoint' | 'apiKey', string>,
+    params: Record<"endpoint" | "apiKey", string>,
     predictionSet: number
   ) =>
     httpClient.post(
@@ -402,8 +402,8 @@ export const apiServiceProvider = ({
       },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': params.apiKey,
+          "Content-Type": "application/json",
+          "x-api-key": params.apiKey,
         },
       }
     )
@@ -419,7 +419,7 @@ export const apiServiceProvider = ({
           }
         }`,
       },
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { "Content-Type": "application/json" } }
     )
 
   return {

@@ -7,7 +7,7 @@ import * as Rx from "rxjs"
 import * as Op from "rxjs/operators"
 
 /* import services */
-import { dynamoServiceProvider } from "../services/dynamodb-1"
+import { dynamoServiceProvider } from "../services/dynamodb/dynamodb-1"
 import { dateServiceProvider } from "../services/date"
 
 /* import utils */

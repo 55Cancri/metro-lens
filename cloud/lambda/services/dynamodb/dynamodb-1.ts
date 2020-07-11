@@ -1,7 +1,7 @@
-import * as Iam from "../types/iam"
-import * as Dynamo from "../types/dynamodb"
-import { winston } from "../utils/unicorns"
-import * as listUtils from "../utils/lists"
+import * as Iam from "../../types/iam"
+import * as Dynamo from "./types"
+import { winston } from "../../utils/unicorns"
+import * as listUtils from "../../utils/lists"
 
 /* define environment variables */
 const TABLE_NAME = process.env.TABLE_NAME || ""
