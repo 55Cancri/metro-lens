@@ -3,12 +3,12 @@
 import aws from "aws-sdk"
 import { dateServiceProvider } from "../../services/date"
 
-// type PrimaryKey = {
-//   entity: string
-//   id: string
-// }
+type PrimaryKey = {
+  entity: string
+  id: string
+}
 
-export type PrimaryKey = {
+export type CreateItemParams = {
   pk: string
   sk: string | number
 }
@@ -54,6 +54,7 @@ export type Vehicle = {
 
 export type VehiclePredictionItem = {
   routes: { [routeIdVehicleId: string]: Vehicle }
+  allVehicles: string[]
 }
 
 export type PredictionItem = PrimaryKey & VehiclePredictionItem
@@ -116,9 +117,7 @@ export type BusVehicleItem = PrimaryKey & {
   TTL: number
 }
 
-export type BusesByRouteId = {
-  entity: string
-  id: string
+export type BusesByRouteId = PrimaryKey & {
   totalPredictionSets?: number
   routes: {
     [key: string]: {
@@ -129,6 +128,32 @@ export type BusesByRouteId = {
       predictions: Prediction[]
     }
   }
+}
+
+export type MapItem = PrimaryKey & {
+  map: {
+    [key: string]: {
+      stopId?: string
+      stopName?: string
+      sequence: number
+      type: "stop" | "waypoint"
+      routeDirection: string
+      lat: string
+      lon: string
+    }
+  }[]
+}
+
+export type VehicleStopItem = PrimaryKey & {
+  stops: {
+    [key: string]: {
+      lat: string
+      lon: string
+      routeId: string
+      stopId: string
+      stopName: string
+    }
+  }[]
 }
 
 export type ApiCountTodayItem = PrimaryKey & { apiCount: number }

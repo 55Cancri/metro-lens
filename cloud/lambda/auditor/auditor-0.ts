@@ -1,3 +1,14 @@
+/**
+ * For the future:
+ * 1. It is impossible for active vehicles to become dormant,
+ *    but it should be possible for dormant vehicles to become
+ *    active should they start to return predictions. The move
+ *    of dormant vehicles to active vehicles should already
+ *    happen due to the flat map, however, those vehicles are
+ *    currently not getting removed from the dormant vehicles.
+ *
+ */
+
 import * as lambda from "aws-lambda"
 import { winston } from "../utils/unicorns"
 
@@ -58,16 +69,22 @@ export const auditor = (deps: Deps) => async (
     awakenedVehiclesId,
     { flatVehicleStatus, initialVehicleStatus: active }
   )
-  const dormantVehicleStatus = auditorUtils.getVehicleStatusItem(
-    awakenedVehiclesId,
-    { flatVehicleStatus, initialVehicleStatus: dormant }
-  )
+  // TODO: just like scribe, this is wrong. Will add awakened vehicles to the dormant
+  // const dormantVehicleStatus = auditorUtils.getVehicleStatusItem(
+  //   awakenedVehiclesId,
+  //   { flatVehicleStatus, initialVehicleStatus: dormant }
+  // )
+  // TODO: instead, add logic to go through the dormant flat status and if any
+  // TODO: reawakened vehicles are there, remove them, THEN save to the status item
+
   const vehicleStatusItem = dynamodb.createItem({
     pk: "vehicle",
     sk: "status",
     active: activeVehicleStatus,
-    dormant: dormantVehicleStatus,
+    dormant,
+    // dormant: dormantVehicleStatus,
   })
+
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
   /* ------------------------------ vehicle stops ----------------------------- */

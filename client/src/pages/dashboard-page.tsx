@@ -1,17 +1,17 @@
 /** @jsx jsx */
-import React from 'react'
-import { useHistory } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { jsx } from '@emotion/core'
-import axios from 'axios'
-import geo from 'latlon-geohash'
-import * as L from 'react-leaflet'
+import React from "react"
+import { useHistory } from "react-router-dom"
+import { motion } from "framer-motion"
+import { jsx } from "@emotion/core"
+import axios from "axios"
+import geo from "latlon-geohash"
+import * as L from "react-leaflet"
 
-import * as urls from '../constants/urls'
-import * as colors from '../constants/colors'
-import * as variants from '../constants/variants'
-import { useDimensions } from '../hooks/use-dimensions'
-import * as apolloHooks from '../types/apollo-hooks'
+import * as urls from "../constants/urls"
+import * as colors from "../constants/colors"
+import * as variants from "../constants/variants"
+import { useDimensions } from "../hooks/use-dimensions"
+import * as apolloHooks from "../types/apollo-hooks"
 /**
  * Maps:
  * CartoDB.Voyager
@@ -27,14 +27,14 @@ type UserPosition = {
 
 const styles: Styles = {
   layout: {
-    padding: '20px 50px',
+    padding: "20px 50px",
   },
   input: {
-    display: 'grid',
+    display: "grid",
     height: 25,
-    width: '50%',
+    width: "50%",
     marginTop: 25,
-    padding: '4px 10px',
+    padding: "4px 10px",
     border: 0,
     outline: 0,
     borderRadius: 4,
@@ -55,11 +55,11 @@ const x = {
   geoPosition: {
     metroLines: {},
     routeStops: {
-      '2101': {
-        'Gallows Rd': {
+      "2101": {
+        "Gallows Rd": {
           lat: 2,
           lon: 4,
-          type: 'waypoint',
+          type: "waypoint",
         },
         // ...
       },
@@ -73,12 +73,12 @@ export const DashboardPage: React.FC = () => {
   const [userPosition, setUserPosition] = React.useState<Partial<UserPosition>>(
     {}
   )
-  const [mapLink, setMapLink] = React.useState('')
-  const busSubscription = apolloHooks.useOnUpdateBusPositionsSubscription()
+  const [mapLink, setMapLink] = React.useState("")
+  const busSubscription = apolloHooks.useOnUpdateVehiclePositionsSubscription()
   const testSubscription = apolloHooks.useTestedMutationSubscription()
   // const [mapRef, mapDimensions] = useDimensions()
 
-  console.log('BUS SUBSCRIPTION')
+  console.log("BUS SUBSCRIPTION")
   console.log({ busSubscription })
 
   /* initialize route history */
@@ -104,13 +104,13 @@ export const DashboardPage: React.FC = () => {
 
     const onError = (error: PositionError) => {
       console.log({ error })
-      console.log('Unable to retrieve your location')
+      console.log("Unable to retrieve your location")
     }
 
     if (!navigator.geolocation) {
-      console.log('Geolocation is not supported by your browser')
+      console.log("Geolocation is not supported by your browser")
     } else {
-      console.log('Locating…')
+      console.log("Locating…")
       navigator.geolocation.getCurrentPosition(onSuccess, onError, {
         enableHighAccuracy: true,
         timeout: 10 * 1000,
@@ -122,8 +122,8 @@ export const DashboardPage: React.FC = () => {
   const stopTrackingUserPosition = (id: string) => {}
 
   const handleClick = () => {
-    localStorage.removeItem('jwt')
-    return history.push('/')
+    localStorage.removeItem("jwt")
+    return history.push("/")
   }
 
   React.useEffect(() => {
@@ -160,7 +160,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <L.Map
-          style={{ height: 500, width: '100%' }}
+          style={{ height: 500, width: "100%" }}
           center={[userPosition.lat!, userPosition.lon!]}
           zoom={userPosition.zoom}
           ref={(node) =>

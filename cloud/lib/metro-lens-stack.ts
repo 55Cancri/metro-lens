@@ -1,26 +1,26 @@
-import path from 'path'
-import * as cdk from '@aws-cdk/core'
-import * as s3 from '@aws-cdk/aws-s3'
-import * as sqs from '@aws-cdk/aws-sqs'
-import * as sns from '@aws-cdk/aws-sns'
-import * as subscriptions from '@aws-cdk/aws-sns-subscriptions'
-import * as s3Deployment from '@aws-cdk/aws-s3-deployment'
-import * as dynamodb from '@aws-cdk/aws-dynamodb'
-import * as lambda from '@aws-cdk/aws-lambda'
-import * as nodejs from '@aws-cdk/aws-lambda-nodejs'
-import * as appsync from '@aws-cdk/aws-appsync'
-import * as cloudwatch from '@aws-cdk/aws-cloudwatch'
-import * as cloudwatchActions from '@aws-cdk/aws-cloudwatch-actions'
-import * as cloudfront from '@aws-cdk/aws-cloudfront'
-import * as logs from '@aws-cdk/aws-logs'
-import * as events from '@aws-cdk/aws-events'
-import * as targets from '@aws-cdk/aws-events-targets'
-import * as route53 from '@aws-cdk/aws-route53'
-import * as alias from '@aws-cdk/aws-route53-targets'
-import * as acm from '@aws-cdk/aws-certificatemanager'
-import * as dotenv from 'dotenv'
+import path from "path"
+import * as cdk from "@aws-cdk/core"
+import * as s3 from "@aws-cdk/aws-s3"
+import * as sqs from "@aws-cdk/aws-sqs"
+import * as sns from "@aws-cdk/aws-sns"
+import * as subscriptions from "@aws-cdk/aws-sns-subscriptions"
+import * as s3Deployment from "@aws-cdk/aws-s3-deployment"
+import * as dynamodb from "@aws-cdk/aws-dynamodb"
+import * as lambda from "@aws-cdk/aws-lambda"
+import * as nodejs from "@aws-cdk/aws-lambda-nodejs"
+import * as appsync from "@aws-cdk/aws-appsync"
+import * as cloudwatch from "@aws-cdk/aws-cloudwatch"
+import * as cloudwatchActions from "@aws-cdk/aws-cloudwatch-actions"
+import * as cloudfront from "@aws-cdk/aws-cloudfront"
+import * as logs from "@aws-cdk/aws-logs"
+import * as events from "@aws-cdk/aws-events"
+import * as targets from "@aws-cdk/aws-events-targets"
+import * as route53 from "@aws-cdk/aws-route53"
+import * as alias from "@aws-cdk/aws-route53-targets"
+import * as acm from "@aws-cdk/aws-certificatemanager"
+import * as dotenv from "dotenv"
 
-import { getEnvironmentVariables } from '../bin/get-env-vars'
+import { getEnvironmentVariables } from "../bin/get-env-vars"
 
 /* setup dotenv to read environment variables */
 dotenv.config()
@@ -66,34 +66,34 @@ export class MetroLensStack extends cdk.Stack {
     )
 
     /* create dynamodb table */
-    const metrolensTable = new dynamodb.Table(this, 'metrolens-table', {
-      tableName: 'metro',
-      partitionKey: { name: 'entity', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+    const metrolensTable = new dynamodb.Table(this, "metrolens-table", {
+      tableName: "metro",
+      partitionKey: { name: "entity", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PROVISIONED,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
     /* allow query by email and username on login and register */
     metrolensTable.addLocalSecondaryIndex({
-      indexName: 'usernameIndex',
-      sortKey: { name: 'username', type: dynamodb.AttributeType.STRING },
+      indexName: "usernameIndex",
+      sortKey: { name: "username", type: dynamodb.AttributeType.STRING },
     })
 
     /* create dynamodb history table */
     const metrolensHistTable = new dynamodb.Table(
       this,
-      'metrolens-hist-table',
+      "metrolens-hist-table",
       {
-        tableName: 'metro-hist',
-        partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-        sortKey: { name: 'archiveTime', type: dynamodb.AttributeType.STRING },
+        tableName: "metro-hist",
+        partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+        sortKey: { name: "archiveTime", type: dynamodb.AttributeType.STRING },
         billingMode: dynamodb.BillingMode.PROVISIONED,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }
     )
 
-    const layer = new lambda.LayerVersion(this, 'CommonLayer', {
+    const layer = new lambda.LayerVersion(this, "CommonLayer", {
       /**
        * lambda.Code.fromAsset(path) specifies a directory or a .zip
        * file in the local filesystem which will be zipped and uploaded
@@ -102,9 +102,9 @@ export class MetroLensStack extends cdk.Stack {
        * the top-level directory.
        * https://medium.com/@anjanava.biswas/nodejs-runtime-environment-with-aws-lambda-layers-f3914613e20e
        * */
-      code: lambda.Code.fromAsset(path.join(__dirname, '../layers')),
+      code: lambda.Code.fromAsset(path.join(__dirname, "../layers")),
       compatibleRuntimes: [lambda.Runtime.NODEJS_12_X],
-      description: 'Layer for Metro Lens lambdas.',
+      description: "Layer for Metro Lens lambdas.",
     })
 
     /* -------------------------------------------------------------------------- */
@@ -112,8 +112,8 @@ export class MetroLensStack extends cdk.Stack {
     /* -------------------------------------------------------------------------- */
 
     /* create appsync to interface with lambdas and dynamodb */
-    const graphql = new appsync.GraphQLApi(this, 'GraphQLApi', {
-      name: 'metrolens-graphql-api',
+    const graphql = new appsync.GraphQLApi(this, "GraphQLApi", {
+      name: "metrolens-graphql-api",
       logConfig: {
         /* log only errors */
         fieldLogLevel: appsync.FieldLogLevel.ERROR,
@@ -130,21 +130,21 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     /* appsync lambda to register user */
-    const lambdaRegister = new nodejs.NodejsFunction(this, 'register', {
-      functionName: 'register',
+    const lambdaRegister = new nodejs.NodejsFunction(this, "register", {
+      functionName: "register",
       runtime: lambda.Runtime.NODEJS_12_X,
       timeout: cdk.Duration.seconds(10),
-      entry: './lambda/register/register-0.ts',
-      handler: 'handler',
+      entry: "./lambda/register/register-0.ts",
+      handler: "handler",
       layers: [layer],
-      description: 'Register a user.',
+      description: "Register a user.",
       logRetention: logs.RetentionDays.FIVE_DAYS,
       environment: {
-        SORT_KEY: 'id',
-        HIST_SORT_KEY: 'archiveTime',
-        PARTITION_KEY: 'entity',
-        HIST_PARTITION_KEY: 'id',
-        USERNAME_SORT_KEY: 'username',
+        SORT_KEY: "id",
+        HIST_SORT_KEY: "archiveTime",
+        PARTITION_KEY: "entity",
+        HIST_PARTITION_KEY: "id",
+        USERNAME_SORT_KEY: "username",
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
         JWT_SECRET: String(process.env.JWT_SECRET),
@@ -152,21 +152,21 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     /* appsync lambda to login user */
-    const lambdaLogin = new nodejs.NodejsFunction(this, 'login', {
-      functionName: 'login',
+    const lambdaLogin = new nodejs.NodejsFunction(this, "login", {
+      functionName: "login",
       runtime: lambda.Runtime.NODEJS_12_X,
       timeout: cdk.Duration.seconds(10),
-      entry: './lambda/login/login-0.ts',
-      handler: 'handler',
+      entry: "./lambda/login/login-0.ts",
+      handler: "handler",
       layers: [layer],
       logRetention: logs.RetentionDays.FIVE_DAYS,
-      description: 'Login a user.',
+      description: "Login a user.",
       environment: {
-        SORT_KEY: 'id',
-        PARTITION_KEY: 'entity',
-        HIST_SORT_KEY: 'archiveTime',
-        HIST_PARTITION_KEY: 'id',
-        USERNAME_SORT_KEY: 'username',
+        SORT_KEY: "id",
+        PARTITION_KEY: "entity",
+        HIST_SORT_KEY: "archiveTime",
+        HIST_PARTITION_KEY: "id",
+        USERNAME_SORT_KEY: "username",
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
         JWT_SECRET: String(process.env.JWT_SECRET),
@@ -174,18 +174,18 @@ export class MetroLensStack extends cdk.Stack {
     })
 
     /* appsync lambda to return bus predictions */
-    const lambdaBuses = new nodejs.NodejsFunction(this, 'buses', {
-      functionName: 'buses',
+    const lambdaVehicles = new nodejs.NodejsFunction(this, "buses", {
+      functionName: "vehicles",
       runtime: lambda.Runtime.NODEJS_12_X,
       timeout: cdk.Duration.seconds(30),
-      entry: './lambda/buses/buses-0.ts',
-      handler: 'handler',
+      entry: "./lambda/vehicles/handler.ts",
+      handler: "handler",
       layers: [layer],
       logRetention: logs.RetentionDays.FIVE_DAYS,
-      description: 'Query bus predictions.',
+      description: "Query vehicle predictions.",
       environment: {
-        SORT_KEY: 'id',
-        PARTITION_KEY: 'entity',
+        SORT_KEY: "id",
+        PARTITION_KEY: "entity",
         // HIST_SORT_KEY: 'archiveTime',
         // HIST_PARTITION_KEY: 'id',
         // USERNAME_SORT_KEY: 'username',
@@ -197,37 +197,37 @@ export class MetroLensStack extends cdk.Stack {
 
     /* appsync: add lambda as a data source */
     const lambdaRegisterDataSource = graphql.addLambdaDataSource(
-      'lambdaRegister',
-      'Register lambda triggered by appsync',
+      "lambdaRegister",
+      "Register lambda triggered by appsync",
       lambdaRegister
     )
 
     /* appsync: create a resolver for the data source */
     lambdaRegisterDataSource.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'registerUser',
+      typeName: "Mutation",
+      fieldName: "registerUser",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
     // /* appsync: add lambda as a data source */
     const lambdaLoginDataSource = graphql.addLambdaDataSource(
-      'lambdaLogin',
-      'Login lambda triggered by appsync',
+      "lambdaLogin",
+      "Login lambda triggered by appsync",
       lambdaLogin
     )
 
     /* appsync: create a resolver for the data source */
     lambdaLoginDataSource.createResolver({
-      typeName: 'Query',
-      fieldName: 'getUsers',
+      typeName: "Query",
+      fieldName: "getUsers",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
     lambdaLoginDataSource.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'loginUser',
+      typeName: "Mutation",
+      fieldName: "loginUser",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
@@ -235,42 +235,42 @@ export class MetroLensStack extends cdk.Stack {
     /* appsync: create test subscription lambda */
     const testSubscriptionLambda = new lambda.Function(
       this,
-      'testSubscriptionLambda',
+      "testSubscriptionLambda",
       {
         code: lambda.Code.fromInline(
           "exports.handler = async (event, context) => { console.log({ event }); /* context.succeed(event)*/ const obj = { name: 'Larry', age: '21' }; console.log({ obj }); return obj }"
         ),
         runtime: lambda.Runtime.NODEJS_12_X,
-        handler: 'index.handler',
+        handler: "index.handler",
       }
     )
 
     /* appsync: add lambda as a data source */
     const testSubscriptionDataSource = graphql.addLambdaDataSource(
-      'lambdaTestSubscription',
-      'Test Subscription Lambda',
+      "lambdaTestSubscription",
+      "Test Subscription Lambda",
       testSubscriptionLambda
     )
 
     /* appsync: mutation response is handled by the lambda */
     testSubscriptionDataSource.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'testMutation',
+      typeName: "Mutation",
+      fieldName: "testMutation",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
     /* appsync: add lambda as a data source */
-    const busesDataSource = graphql.addLambdaDataSource(
-      'lambdaBuses',
-      'Query buses Lambda',
-      lambdaBuses
+    const vehicleDataSource = graphql.addLambdaDataSource(
+      "lambdaVehicles",
+      "Query vehicles Lambda",
+      lambdaVehicles
     )
 
     /* appsync: mutation response is handled by the lambda */
-    busesDataSource.createResolver({
-      typeName: 'Mutation',
-      fieldName: 'updateBusPositions',
+    vehicleDataSource.createResolver({
+      typeName: "Mutation",
+      fieldName: "updateVehiclePositions",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
@@ -303,26 +303,26 @@ export class MetroLensStack extends cdk.Stack {
 
     /* create lambda to make api bus calls every minute */
     // const lambdaScribe = new lambda.Function(this, 'scribe', {
-    const lambdaScribe = new nodejs.NodejsFunction(this, 'scribe', {
-      functionName: 'scribe',
+    const lambdaScribe = new nodejs.NodejsFunction(this, "scribe", {
+      functionName: "scribe",
       runtime: lambda.Runtime.NODEJS_12_X,
       timeout: cdk.Duration.seconds(90),
       /* code loaded from dist directory */
-      entry: './lambda/scribe/scribe-0.ts',
+      entry: "./lambda/scribe/handler.ts",
       // code: lambda.Code.fromAsset('lambda/dist'),
       /* file is metro-polling, function is handler */
-      handler: 'handler',
+      handler: "handler",
       // handler: 'metro-polling.handler',
       /* include reuseable node modles */
       layers: [layer],
       logRetention: logs.RetentionDays.FIVE_DAYS,
       description:
-        'Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.',
+        "Call the wmata and fairfax connector apis to get the latest predictions, then invoke an appsync mutation to push the new values to the client subscribers and save the values to the database.",
       environment: {
-        SORT_KEY: 'id',
-        HIST_SORT_KEY: 'archiveTime',
-        PARTITION_KEY: 'entity',
-        HIST_PARTITION_KEY: 'id',
+        SORT_KEY: "id",
+        HIST_SORT_KEY: "archiveTime",
+        PARTITION_KEY: "entity",
+        HIST_PARTITION_KEY: "id",
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
         CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
@@ -336,32 +336,32 @@ export class MetroLensStack extends cdk.Stack {
     const scribeTarget = new targets.LambdaFunction(lambdaScribe)
 
     /* create cloudwatch 1 minute interval trigger for lambda */
-    new events.Rule(this, 'scribeSchedule', {
+    new events.Rule(this, "scribeSchedule", {
       description:
-        'Call a lambda to poll wmata and fairfax connector apis to get the latest bus and rail predictions. The lambda will trigger an appsync mutation and save the latest data to dynamodb.',
+        "Call a lambda to poll wmata and fairfax connector apis to get the latest bus and rail predictions. The lambda will trigger an appsync mutation and save the latest data to dynamodb.",
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       /* attach the lambda to the schedule */
       targets: [scribeTarget],
     })
 
-    const lambdaAuditor = new nodejs.NodejsFunction(this, 'auditor', {
-      functionName: 'auditor',
+    const lambdaAuditor = new nodejs.NodejsFunction(this, "auditor", {
+      functionName: "auditor",
       runtime: lambda.Runtime.NODEJS_12_X,
       /* code loaded from dist directory */
-      entry: './lambda/auditor/auditor-0.ts',
+      entry: "./lambda/auditor/handler.ts",
       // code: lambda.Code.fromAsset('lambda/auditor'),
       /* file is auditor.ts, function is handler */
-      handler: 'handler',
+      handler: "handler",
       /* include reuseable node modles */
       layers: [layer],
       timeout: cdk.Duration.seconds(120),
       logRetention: logs.RetentionDays.FIVE_DAYS,
-      description: 'Ensure all vehicle ids are present in the database.',
+      description: "Ensure all vehicle ids are present in the database.",
       environment: {
-        SORT_KEY: 'id',
-        PARTITION_KEY: 'entity',
-        HIST_PARTITION_KEY: 'id',
-        HIST_SORT_KEY: 'archiveTime',
+        SORT_KEY: "id",
+        PARTITION_KEY: "entity",
+        HIST_PARTITION_KEY: "id",
+        HIST_SORT_KEY: "archiveTime",
         TABLE_NAME: metrolensTable.tableName,
         HIST_TABLE_NAME: metrolensHistTable.tableName,
         CONNECTOR_KEY: String(process.env.CONNECTOR_KEY),
@@ -373,9 +373,9 @@ export class MetroLensStack extends cdk.Stack {
     const auditorTarget = new targets.LambdaFunction(lambdaAuditor)
 
     /* create cloudwatch 1 minute interval trigger for lambda */
-    new events.Rule(this, 'auditorSchedule', {
+    new events.Rule(this, "auditorSchedule", {
       description:
-        'Call the auditor lambda to make sure all vehicle ids are accounted for.',
+        "Call the auditor lambda to make sure all vehicle ids are accounted for.",
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
       /* attach the lambda to the schedule */
       targets: [auditorTarget],
@@ -388,15 +388,15 @@ export class MetroLensStack extends cdk.Stack {
     /* grant the lambdas access to the dynamodb table */
     metrolensTable.grantReadWriteData(lambdaAuditor)
     metrolensTable.grantReadWriteData(lambdaScribe)
-    metrolensTable.grantReadWriteData(lambdaBuses)
+    metrolensTable.grantReadWriteData(lambdaVehicles)
 
     /* grant the lambdas access to the dynamodb hist table */
     metrolensHistTable.grantWriteData(lambdaAuditor)
     metrolensHistTable.grantWriteData(lambdaScribe)
 
     /* create a new topic for lambda errors */
-    const lambdaErrorTopic = new sns.Topic(this, 'LambdaErrorTopic', {
-      topicName: 'lambda-error-topic',
+    const lambdaErrorTopic = new sns.Topic(this, "LambdaErrorTopic", {
+      topicName: "lambda-error-topic",
     })
 
     /**
@@ -411,10 +411,10 @@ export class MetroLensStack extends cdk.Stack {
      */
     const auditorLambdaErrorAlarm = new cloudwatch.Alarm(
       this,
-      'AuditorLambdaErrorAlarm',
+      "AuditorLambdaErrorAlarm",
       {
-        alarmName: 'auditor-lambda-error-alarm',
-        alarmDescription: 'Alarm for errors from the auditor lambda.',
+        alarmName: "auditor-lambda-error-alarm",
+        alarmDescription: "Alarm for errors from the auditor lambda.",
         /* create the alarm using the lambda */
         metric: lambdaAuditor.metricErrors({
           period: cdk.Duration.minutes(1),
@@ -437,10 +437,10 @@ export class MetroLensStack extends cdk.Stack {
      */
     const scribeLambdaErrorAlarm = new cloudwatch.Alarm(
       this,
-      'ScribeLambdaErrorAlarm',
+      "ScribeLambdaErrorAlarm",
       {
-        alarmName: 'scribe-lambda-error-alarm',
-        alarmDescription: 'Alarm for errors from the scribe lambda.',
+        alarmName: "scribe-lambda-error-alarm",
+        alarmDescription: "Alarm for errors from the scribe lambda.",
         /* create the alarm using the lambda */
         metric: lambdaScribe.metricErrors({
           period: cdk.Duration.minutes(1),
@@ -484,7 +484,7 @@ export class MetroLensStack extends cdk.Stack {
       ): cloudfront.CfnDistribution.CustomErrorResponseProperty => ({
         errorCode,
         responseCode: 200,
-        responsePagePath: '/index.html',
+        responsePagePath: "/index.html",
         errorCachingMinTtl: 300,
       }),
     },
@@ -509,7 +509,7 @@ export class MetroLensStack extends cdk.Stack {
         /* The function will request an OAI user and a ref will be returned to it. */
         const cloudFrontOaiRef = new cloudfront.CfnCloudFrontOriginAccessIdentity(
           this,
-          'OAI',
+          "OAI",
           {
             cloudFrontOriginAccessIdentityConfig: {
               comment: `Necessary for CloudFront to gain access to the bucket.`,
@@ -520,7 +520,7 @@ export class MetroLensStack extends cdk.Stack {
         /* The actual OAI user can then be created below when the ref above is passed as a parameter. */
         return cloudfront.OriginAccessIdentity.fromOriginAccessIdentityName(
           this,
-          'OAIImported',
+          "OAIImported",
           cloudFrontOaiRef.ref
         )
       },
@@ -531,9 +531,9 @@ export class MetroLensStack extends cdk.Stack {
     new s3.Bucket(this, bucketName, {
       bucketName,
       /* redirect success requests to index.html */
-      websiteIndexDocument: 'index.html',
+      websiteIndexDocument: "index.html",
       /* redirect error requests to index.html */
-      websiteErrorDocument: 'index.html',
+      websiteErrorDocument: "index.html",
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       /* completely destroy bucket during cdk destroy */
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -553,7 +553,7 @@ export class MetroLensStack extends cdk.Stack {
       destinationBucket: bucket,
 
       /* the file paths to invalidate in the CloudFront distribution */
-      distributionPaths: ['/*'],
+      distributionPaths: ["/*"],
       /* the CloudFront distribution that has sole access to the bucket */
       distribution,
       retainOnDelete: false,
@@ -591,8 +591,8 @@ export class MetroLensStack extends cdk.Stack {
     const errorConfig404 = this.helpers.s3.getErrorConfig(404)
 
     /* create the cloudformation */
-    return new cloudfront.CloudFrontWebDistribution(this, 'CloudFront', {
-      comment: 'The cloudfront distribution for metro-lens.com.',
+    return new cloudfront.CloudFrontWebDistribution(this, "CloudFront", {
+      comment: "The cloudfront distribution for metro-lens.com.",
       originConfigs: [
         {
           s3OriginSource: {
@@ -611,7 +611,7 @@ export class MetroLensStack extends cdk.Stack {
       /* redirect all errors back to the react page */
       errorConfigurations: [errorConfig403, errorConfig404],
       /* The default object to serve. Not sure what would happen without this. */
-      defaultRootObject: 'index.html',
+      defaultRootObject: "index.html",
     })
   }
 
@@ -649,21 +649,21 @@ export class MetroLensStack extends cdk.Stack {
 
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
       this,
-      'zone',
+      "zone",
       { hostedZoneId, zoneName: hostedZoneName }
     )
 
-    new route53.ARecord(this, 'baseARecord', {
+    new route53.ARecord(this, "baseARecord", {
       zone: hostedZone,
-      recordName: 'metro-lens.com.',
+      recordName: "metro-lens.com.",
       target: route53.RecordTarget.fromAlias(
         new alias.CloudFrontTarget(distribution)
       ),
     })
 
-    new route53.ARecord(this, 'wwwARecord', {
+    new route53.ARecord(this, "wwwARecord", {
       zone: hostedZone,
-      recordName: 'www.metro-lens.com.',
+      recordName: "www.metro-lens.com.",
       target: route53.RecordTarget.fromAlias(
         new alias.CloudFrontTarget(distribution)
       ),

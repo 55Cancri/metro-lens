@@ -1,5 +1,5 @@
-subscription onUpdateBusPositions {
-  onUpdateBusPositions {
+subscription onUpdateVehiclePositions {
+  onUpdateVehiclePositions {
     vehicleId
     rt
     lat

@@ -9,6 +9,10 @@ input LoginInput {
   password: String!
 }
 
+input VehicleInput {
+  predictionSet: Int!
+}
+
 type FavoriteStop {
   stopId: String!
   stopName: String!
@@ -44,7 +48,7 @@ type Prediction {
   stopName: String!
 }
 
-type Bus {
+type Vehicle {
   vehicleId: String!
   rt: String!
   lat: String!
@@ -66,11 +70,11 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateBusPositions: [Bus!]
+  updateVehiclePositions(input: VehicleInput!): [Vehicle!]
   testMutation: Test
 }
 
 type Subscription {
-  onUpdateBusPositions: [Bus!]
+  onUpdateVehiclePositions: [Vehicle!]
   testedMutation: Test
 }

@@ -60,7 +60,7 @@ export const scribe = (deps: Deps) => async (
     Api.ConnectorVehicleOrError
   >("vehicles", {
     api,
-    batchedVehicleParams,
+    batchedVehicleParams, // vehicles where `isActive=true`
   })
 
   /* create the active and dormant vehicle status */
@@ -69,18 +69,21 @@ export const scribe = (deps: Deps) => async (
     flatVehicleStatus,
     flatActiveStatus
   )
-  const dormantVehicleStatus = scribeUtils.getVehicleStatus(
-    vehicles,
-    flatVehicleStatus,
-    flatDormantStatus
-  )
+  // TODO: wrong because it updates wentOffline property for dormant vehicles to current time
+  // TODO: probably can delete as may be handled by auditor
+  // const dormantVehicleStatus = scribeUtils.getVehicleStatus(
+  //   vehicles,
+  //   flatVehicleStatus,
+  //   flatDormantStatus
+  // )
 
   /* create the vehicle status item */
   const vehicleStatusItem = dynamodb.createItem({
     pk: "vehicle",
     sk: "status",
     active: activeVehicleStatus,
-    dormant: dormantVehicleStatus,
+    dormant, // TODO: probably can delete as may be handled by auditor
+    // dormant: dormantVehicleStatus,
   })
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
@@ -91,42 +94,38 @@ export const scribe = (deps: Deps) => async (
     Api.ConnectorPredictionOrError
   >("predictions", {
     api,
-    batchedVehicleParams,
+    batchedVehicleParams, // vehicles where `isActive=true`
   })
 
   /* create the predictions map */
   const predictionMap = scribeUtils.createPredictionMap(predictions, { date })
 
   /* get the array of prediction items */
-  const predictionItems = await dynamodb.getVehiclePredictions()
+  const predictionItems = await dynamodb.getActivePredictions()
 
   /*create a timestamp for the current moment */
   const lastUpdateTime = date.getNowInISO()
 
-  /* iterate and update each prediction item */
-  predictionItems.map(async (item, i) => {
-    /* define the prediction item number starting at 1 */
-    const predictionItemId = i + 1
-
-    /* create a new vehicle item from the old and new vehicles */
-    const vehicleStruct = scribeUtils.createVehicleStruct(predictionMap, {
+  predictionItems.reduce(async (store, pastItem) => {
+    const flattenedPredictions = await store
+    const { id: predictionItemId, allVehicles } = pastItem
+    const routes = scribeUtils.createVehicleStruct(flattenedPredictions, {
       currentVehicles: vehicles,
-      pastVehicles: item,
+      pastVehicles: pastItem,
       lastUpdateTime,
     })
-
-    /* create a new prediction item */
     const vehicleItem = dynamodb.createItem({
-      pk: "prediction",
+      pk: "active-prediction",
       sk: predictionItemId,
-      routes: vehicleStruct,
+      allVehicles,
+      routes,
     })
     const vehicleHistoryItem = dynamodb.createHistoryItem({
       pk: "vehicle_predictions_history",
       sk: date.getNowInISO(),
       id: predictionItemId,
-      routes: vehicleStruct,
-      // routes: vehicleMap,
+      allVehicles,
+      routes,
       TTL: date.setTTLExpirationIn({ days: 1 }),
     })
     const saveVehicle = dynamodb.writeItem(vehicleItem)
@@ -140,10 +139,14 @@ export const scribe = (deps: Deps) => async (
     }
     const mutationResult = api.triggerVehicleMutation(
       mutationParams,
-      predictionItemId
+      Number(predictionItemId)
     )
-    return Promise.all([saveVehicle, saveHistory, mutationResult])
-  })
+    await Promise.all([saveVehicle, saveHistory, mutationResult])
+
+    // TODO: somehow, only the unused vehicles should be returned, that way
+    // TODO: you can later create new prediction items with the leftovers
+    return flattenedPredictions
+  }, Promise.resolve(predictionMap))
 
   /* ---------------------- count the number of api calls --------------------- */
 

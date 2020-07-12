@@ -1,6 +1,6 @@
-import gql from 'graphql-tag'
-import * as ApolloReactCommon from '@apollo/react-common'
-import * as ApolloReactHooks from '@apollo/react-hooks'
+import gql from "graphql-tag"
+import * as ApolloReactCommon from "@apollo/react-common"
+import * as ApolloReactHooks from "@apollo/react-hooks"
 export type Maybe<T> = T
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
@@ -12,87 +12,91 @@ export type Scalars = {
 }
 
 export type RegisterInput = {
-  username: Scalars['String']
-  email: Scalars['String']
-  password: Scalars['String']
+  username: Scalars["String"]
+  email: Scalars["String"]
+  password: Scalars["String"]
 }
 
 export type LoginInput = {
-  username: Scalars['String']
-  password: Scalars['String']
+  username: Scalars["String"]
+  password: Scalars["String"]
+}
+
+export type VehicleInput = {
+  predictionSet: Scalars["Int"]
 }
 
 export type FavoriteStop = {
-  __typename?: 'FavoriteStop'
-  stopId: Scalars['String']
-  stopName: Scalars['String']
-  userLabel: Scalars['String']
+  __typename?: "FavoriteStop"
+  stopId: Scalars["String"]
+  stopName: Scalars["String"]
+  userLabel: Scalars["String"]
 }
 
 export type Location = {
-  __typename?: 'Location'
-  lat: Scalars['Int']
-  lon: Scalars['Int']
+  __typename?: "Location"
+  lat: Scalars["Int"]
+  lon: Scalars["Int"]
 }
 
 export type User = {
-  __typename?: 'User'
-  uuid: Scalars['ID']
-  email: Scalars['String']
-  username: Scalars['String']
-  password: Scalars['String']
-  status: Scalars['Boolean']
-  dateCreated: Scalars['String']
-  lastSignOn: Scalars['String']
+  __typename?: "User"
+  uuid: Scalars["ID"]
+  email: Scalars["String"]
+  username: Scalars["String"]
+  password: Scalars["String"]
+  status: Scalars["Boolean"]
+  dateCreated: Scalars["String"]
+  lastSignOn: Scalars["String"]
   favoriteStops: Array<Maybe<FavoriteStop>>
   locations: Array<Maybe<Location>>
 }
 
 export type LoginResponse = {
-  __typename?: 'LoginResponse'
-  accessToken: Scalars['String']
+  __typename?: "LoginResponse"
+  accessToken: Scalars["String"]
   user: User
 }
 
 export type Prediction = {
-  __typename?: 'Prediction'
-  arrivalIn: Scalars['String']
-  arrivalTime: Scalars['String']
-  stopId: Scalars['String']
-  stopName: Scalars['String']
+  __typename?: "Prediction"
+  arrivalIn: Scalars["String"]
+  arrivalTime: Scalars["String"]
+  stopId: Scalars["String"]
+  stopName: Scalars["String"]
 }
 
-export type Bus = {
-  __typename?: 'Bus'
-  vehicleId: Scalars['String']
-  rt: Scalars['String']
-  lat: Scalars['String']
-  lon: Scalars['String']
-  lastUpdateTime: Scalars['String']
+export type Vehicle = {
+  __typename?: "Vehicle"
+  vehicleId: Scalars["String"]
+  rt: Scalars["String"]
+  lat: Scalars["String"]
+  lon: Scalars["String"]
+  lastUpdateTime: Scalars["String"]
   predictions: Array<Prediction>
 }
 
 export type Test = {
-  __typename?: 'Test'
-  name: Scalars['String']
-  age: Scalars['String']
+  __typename?: "Test"
+  name: Scalars["String"]
+  age: Scalars["String"]
 }
 
 export type Query = {
-  __typename?: 'Query'
+  __typename?: "Query"
   getUser?: Maybe<User>
   getUsers?: Maybe<Array<Maybe<User>>>
 }
 
 export type QueryGetUserArgs = {
-  id: Scalars['ID']
+  id: Scalars["ID"]
 }
 
 export type Mutation = {
-  __typename?: 'Mutation'
+  __typename?: "Mutation"
   registerUser: LoginResponse
   loginUser: LoginResponse
-  updateBusPositions?: Maybe<Array<Bus>>
+  updateVehiclePositions?: Maybe<Array<Vehicle>>
   testMutation?: Maybe<Test>
 }
 
@@ -104,9 +108,13 @@ export type MutationLoginUserArgs = {
   input: LoginInput
 }
 
+export type MutationUpdateVehiclePositionsArgs = {
+  input: VehicleInput
+}
+
 export type Subscription = {
-  __typename?: 'Subscription'
-  onUpdateBusPositions?: Maybe<Array<Bus>>
+  __typename?: "Subscription"
+  onUpdateVehiclePositions?: Maybe<Array<Vehicle>>
   testedMutation?: Maybe<Test>
 }
 
@@ -114,12 +122,12 @@ export type LoginUserMutationVariables = {
   input: LoginInput
 }
 
-export type LoginUserMutation = { __typename?: 'Mutation' } & {
-  results: { __typename?: 'LoginResponse' } & Pick<
+export type LoginUserMutation = { __typename?: "Mutation" } & {
+  results: { __typename?: "LoginResponse" } & Pick<
     LoginResponse,
-    'accessToken'
+    "accessToken"
   > & {
-      user: { __typename?: 'User' } & Pick<User, 'uuid' | 'email' | 'username'>
+      user: { __typename?: "User" } & Pick<User, "uuid" | "email" | "username">
     }
 }
 
@@ -127,36 +135,36 @@ export type RegisterUserMutationVariables = {
   input: RegisterInput
 }
 
-export type RegisterUserMutation = { __typename?: 'Mutation' } & {
-  results: { __typename?: 'LoginResponse' } & Pick<
+export type RegisterUserMutation = { __typename?: "Mutation" } & {
+  results: { __typename?: "LoginResponse" } & Pick<
     LoginResponse,
-    'accessToken'
+    "accessToken"
   > & {
-      user: { __typename?: 'User' } & Pick<User, 'uuid' | 'email' | 'username'>
+      user: { __typename?: "User" } & Pick<User, "uuid" | "email" | "username">
     }
 }
 
 export type TestedMutationSubscriptionVariables = {}
 
-export type TestedMutationSubscription = { __typename?: 'Subscription' } & {
-  testedMutation?: Maybe<{ __typename?: 'Test' } & Pick<Test, 'name' | 'age'>>
+export type TestedMutationSubscription = { __typename?: "Subscription" } & {
+  testedMutation?: Maybe<{ __typename?: "Test" } & Pick<Test, "name" | "age">>
 }
 
-export type OnUpdateBusPositionsSubscriptionVariables = {}
+export type OnUpdateVehiclePositionsSubscriptionVariables = {}
 
-export type OnUpdateBusPositionsSubscription = {
-  __typename?: 'Subscription'
+export type OnUpdateVehiclePositionsSubscription = {
+  __typename?: "Subscription"
 } & {
-  onUpdateBusPositions?: Maybe<
+  onUpdateVehiclePositions?: Maybe<
     Array<
-      { __typename?: 'Bus' } & Pick<
-        Bus,
-        'vehicleId' | 'rt' | 'lat' | 'lon' | 'lastUpdateTime'
+      { __typename?: "Vehicle" } & Pick<
+        Vehicle,
+        "vehicleId" | "rt" | "lat" | "lon" | "lastUpdateTime"
       > & {
           predictions: Array<
-            { __typename?: 'Prediction' } & Pick<
+            { __typename?: "Prediction" } & Pick<
               Prediction,
-              'arrivalIn' | 'arrivalTime' | 'stopId' | 'stopName'
+              "arrivalIn" | "arrivalTime" | "stopId" | "stopName"
             >
           >
         }
@@ -307,9 +315,9 @@ export type TestedMutationSubscriptionHookResult = ReturnType<
 export type TestedMutationSubscriptionResult = ApolloReactCommon.SubscriptionResult<
   TestedMutationSubscription
 >
-export const OnUpdateBusPositionsDocument = gql`
-  subscription onUpdateBusPositions {
-    onUpdateBusPositions {
+export const OnUpdateVehiclePositionsDocument = gql`
+  subscription onUpdateVehiclePositions {
+    onUpdateVehiclePositions {
       vehicleId
       rt
       lat
@@ -326,34 +334,34 @@ export const OnUpdateBusPositionsDocument = gql`
 `
 
 /**
- * __useOnUpdateBusPositionsSubscription__
+ * __useOnUpdateVehiclePositionsSubscription__
  *
- * To run a query within a React component, call `useOnUpdateBusPositionsSubscription` and pass it any options that fit your needs.
- * When your component renders, `useOnUpdateBusPositionsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useOnUpdateVehiclePositionsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useOnUpdateVehiclePositionsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useOnUpdateBusPositionsSubscription({
+ * const { data, loading, error } = useOnUpdateVehiclePositionsSubscription({
  *   variables: {
  *   },
  * });
  */
-export function useOnUpdateBusPositionsSubscription(
+export function useOnUpdateVehiclePositionsSubscription(
   baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
-    OnUpdateBusPositionsSubscription,
-    OnUpdateBusPositionsSubscriptionVariables
+    OnUpdateVehiclePositionsSubscription,
+    OnUpdateVehiclePositionsSubscriptionVariables
   >
 ) {
   return ApolloReactHooks.useSubscription<
-    OnUpdateBusPositionsSubscription,
-    OnUpdateBusPositionsSubscriptionVariables
-  >(OnUpdateBusPositionsDocument, baseOptions)
+    OnUpdateVehiclePositionsSubscription,
+    OnUpdateVehiclePositionsSubscriptionVariables
+  >(OnUpdateVehiclePositionsDocument, baseOptions)
 }
-export type OnUpdateBusPositionsSubscriptionHookResult = ReturnType<
-  typeof useOnUpdateBusPositionsSubscription
+export type OnUpdateVehiclePositionsSubscriptionHookResult = ReturnType<
+  typeof useOnUpdateVehiclePositionsSubscription
 >
-export type OnUpdateBusPositionsSubscriptionResult = ApolloReactCommon.SubscriptionResult<
-  OnUpdateBusPositionsSubscription
+export type OnUpdateVehiclePositionsSubscriptionResult = ApolloReactCommon.SubscriptionResult<
+  OnUpdateVehiclePositionsSubscription
 >

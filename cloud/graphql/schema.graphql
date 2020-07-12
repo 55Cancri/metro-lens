@@ -15,7 +15,7 @@ input LoginInput {
   password: String!
 }
 
-input BusInput {
+input VehicleInput {
   predictionSet: Int!
 }
 
@@ -57,7 +57,7 @@ type Prediction {
   stopName: String!
 }
 
-type Bus {
+type Vehicle {
   vehicleId: String!
   rt: String!
   lat: String!
@@ -80,11 +80,12 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateBusPositions(input: BusInput!): [Bus!]
+  updateVehiclePositions(input: VehicleInput!): [Vehicle!]
   testMutation: Test
 }
 
 type Subscription {
-  onUpdateBusPositions: [Bus!] @aws_subscribe(mutations: ["updateBusPositions"])
+  onUpdateVehiclePositions: [Vehicle!]
+    @aws_subscribe(mutations: ["updateVehiclePositions"])
   testedMutation: Test @aws_subscribe(mutations: ["testMutation"])
 }

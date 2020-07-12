@@ -15,8 +15,8 @@ type PredictionMap = Record<string, Dynamo.Prediction[]>
  *    '7708': {
  *      isActive: false,
  *      wentOffline: '2020-06-27T20:01:49.236Z'
- *    }
- *    ...
+ *    },
+ *    '7710': { ... }
  *  }
  *  ...
  * }
@@ -27,34 +27,32 @@ type PredictionMap = Record<string, Dynamo.Prediction[]>
  *    isActive: false,
  *    wentOffline: '2020-06-27T20:01:49.236Z',
  *    predictionItemId: '1'
- *  }
+ *  },
+ *  '7710': { ... }
  *  ...
  * }
  */
 export const flattenStatusItem = (
   status: Dynamo.Status
 ): Dynamo.PredictionIdStatus => {
-  // convert to: [ ['1', { '7708': { isActive, wentOffline } }], ... ]
+  // convert to: [ ['1', { '7708': { isActive, wentOffline }, '7710': { ... } } ], ... ]
   const entries = Object.entries(status)
 
-  return entries.reduce(
-    (outerStore, [predictionItemId, predictionItemValue]) => {
-      // convert to: [ ['7708', { isActive, wentOffline }], ... ]
-      const predictionItemEntries = Object.entries(predictionItemValue)
+  return entries.reduce((outerStore, [predictionItemId, vehicle]) => {
+    // convert to: [ ['7708', { isActive, wentOffline }], ['7710', { ... } ] ]
+    const predictionItemEntries = Object.entries(vehicle)
 
-      // convert to: { '7708', { isActive, wentOffline, predictionItemId }, ... }
-      const flatVehicles = predictionItemEntries.reduce(
-        (innerStore, [vehicleId, vehicleStatus]) => ({
-          ...innerStore,
-          [vehicleId]: { ...vehicleStatus, predictionItemId },
-        }),
-        {}
-      )
+    // convert to: { '7708', { isActive, wentOffline, predictionItemId }, { '7710': { ... } } }
+    const flatVehicles = predictionItemEntries.reduce(
+      (innerStore, [vehicleId, vehicleStatus]) => ({
+        ...innerStore,
+        [vehicleId]: { ...vehicleStatus, predictionItemId },
+      }),
+      {}
+    )
 
-      return { ...outerStore, ...flatVehicles }
-    },
-    {}
-  )
+    return { ...outerStore, ...flatVehicles }
+  }, {})
 }
 
 /**
@@ -76,99 +74,65 @@ type Params = {
   batchedVehicleParams: Api.HttpClientConnectorParams[]
 }
 
-type Cond<T> = T extends Api.ConnectorApiVehicle
-  ? Api.ConnectorVehicleOrError[]
-  : T extends Api.ConnectorApiPrediction
-  ? Api.ConnectorPredictionOrError[]
-  : never
-
-type CondB<T extends "vehicle" | "prediction"> = T extends "vehicle"
-  ? Api.ConnectorVehicleOrError[]
-  : T extends "prediction"
-  ? Api.ConnectorPredictionOrError[]
-  : never
-
-type Overload = {
-  <T extends Api.ConnectorApiVehicle>(
-    type: "vehicles",
-    params: Params
-  ): Api.ConnectorVehicleOrError
-  <T extends Api.ConnectorApiPrediction>(
-    type: "predictions",
-    params: Params
-  ): Api.ConnectorPredictionOrError
-}
-
 /**
  * Get the API responses for a list of vehicle ids.
  */
-export const getApiResponse = async <
-  T
-  // Overload
-  // T extends Api.ConnectorVehicleOrError | Api.ConnectorPredictionOrError
-  // T extends Api.ConnectorApiVehicle | Api.ConnectorApiPrediction
->(
+export const getApiResponse = async <T>(
   type: ApiType,
   { api, batchedVehicleParams }: Params
-): Promise<T[]> =>
-  // ): Promise<
-  //   T extends "prediction"
-  //     ? Api.ConnectorPredictionOrError[]
-  //     : Api.ConnectorVehicleOrError[]
-  {
-    // ): Promise<Cond<T>> => {
-    if (type === "vehicles") {
-      const response = (await Promise.all(
-        batchedVehicleParams.map(api.getVehicleLocations)
-      )) as Api.ConnectorApiVehicle[]
+): Promise<T[]> => {
+  if (type === "vehicles") {
+    const response = (await Promise.all(
+      batchedVehicleParams.map(api.getVehicleLocations)
+    )) as Api.ConnectorApiVehicle[]
 
-      // @ts-ignore
-      return response.reduce<T[]>((store, vehicle) => {
-        /* handle vehicle */
-        if ("vehicle" in vehicle && vehicle.error) {
-          return [...store, ...vehicle.vehicle!, ...vehicle.error]
-        }
+    // @ts-ignore
+    return response.reduce<T[]>((store, vehicle) => {
+      /* handle vehicle */
+      if ("vehicle" in vehicle && vehicle.error) {
+        return [...store, ...vehicle.vehicle!, ...vehicle.error]
+      }
 
-        if ("vehicle" in vehicle) {
-          return [...store, ...vehicle.vehicle!]
-        }
+      if ("vehicle" in vehicle) {
+        return [...store, ...vehicle.vehicle!]
+      }
 
-        /* handle exclusive errors */
-        if ("error" in vehicle) {
-          return [...store, ...vehicle.error]
-        }
+      /* handle exclusive errors */
+      if ("error" in vehicle) {
+        return [...store, ...vehicle.error]
+      }
 
-        return store
-      }, [])
-    }
-
-    if (type === "predictions") {
-      const response = (await Promise.all(
-        batchedVehicleParams.map(api.getVehiclePredictions)
-      )) as Api.ConnectorApiPrediction[]
-
-      // @ts-ignore
-      return response.reduce<T[]>((store, vehicle) => {
-        /* handle predictions */
-        if ("prd" in vehicle && vehicle.error) {
-          return [...store, ...vehicle.prd!, ...vehicle.error]
-        }
-
-        if ("prd" in vehicle) {
-          return [...store, ...vehicle.prd!]
-        }
-
-        /* handle exclusive errors */
-        if ("error" in vehicle) {
-          return [...store, ...vehicle.error]
-        }
-
-        return store
-      }, [])
-    }
-
-    return []
+      return store
+    }, [])
   }
+
+  if (type === "predictions") {
+    const response = (await Promise.all(
+      batchedVehicleParams.map(api.getVehiclePredictions)
+    )) as Api.ConnectorApiPrediction[]
+
+    // @ts-ignore
+    return response.reduce<T[]>((store, vehicle) => {
+      /* handle predictions */
+      if ("prd" in vehicle && vehicle.error) {
+        return [...store, ...vehicle.prd!, ...vehicle.error]
+      }
+
+      if ("prd" in vehicle) {
+        return [...store, ...vehicle.prd!]
+      }
+
+      /* handle exclusive errors */
+      if ("error" in vehicle) {
+        return [...store, ...vehicle.error]
+      }
+
+      return store
+    }, [])
+  }
+
+  return []
+}
 
 export const getVehicleStatus = (
   vehicles: Api.ConnectorVehicleOrError[],
@@ -256,8 +220,11 @@ export const createPredictionMap = (
 
 /**
  * Create a new prediction item.
+ * NOTE: only the updated vehicles should have their
+ * `lastUpdateTime` updated time. The others should
+ * remain as they were.
  * @param predictionMap
- * @param param1
+ * @param vehicleParams
  */
 export const createVehicleStruct = (
   predictionMap: PredictionMap,
@@ -274,18 +241,19 @@ export const createVehicleStruct = (
   }
 ) =>
   currentVehicles.reduce((store, vehicle) => {
-    if ("msg" in vehicle) {
-      return store
-    }
-
+    if ("msg" in vehicle) return store
     const { rt, vid: vehicleId, lat, lon } = vehicle
-
     const routeIdVehicleId = `${rt}_${vehicleId}`
 
     /* get the array of predictions for the route-vehicle id */
     const predictions = predictionMap[routeIdVehicleId] as Dynamo.Prediction[]
-
-    const data = { rt, lat, lon, vehicleId, predictions, lastUpdateTime }
-
-    return { ...store, [routeIdVehicleId]: data }
-  }, pastVehicles)
+    const updatedLocationAndPrediction = {
+      rt,
+      lat,
+      lon,
+      vehicleId,
+      predictions,
+      lastUpdateTime,
+    }
+    return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
+  }, pastVehicles.routes)

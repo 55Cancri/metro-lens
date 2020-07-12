@@ -46,21 +46,6 @@ export const dynamoServiceProvider = (
    * Get the map markers for every route.
    */
   const getMapMarkers = async () => {
-    type MapItem = {
-      entity: string
-      id: string
-      map: {
-        [key: string]: {
-          stopId?: string
-          stopName?: string
-          sequence: number
-          type: "stop" | "waypoint"
-          routeDirection: string
-          lat: string
-          lon: string
-        }
-      }[]
-    }
     const params = {
       TableName,
       KeyConditionExpression: "#pk = :pk AND begins_with(#sk, :sk)",
@@ -68,7 +53,7 @@ export const dynamoServiceProvider = (
       ExpressionAttributeValues: { ":pk": "route", ":sk": "map_" },
     }
     const { Items } = await dynamodb.query(params).promise()
-    const [Item] = Items as MapItem[]
+    const [Item] = Items as Dynamo.MapItem[]
     return Item?.map ?? []
   }
 
@@ -76,19 +61,6 @@ export const dynamoServiceProvider = (
    * Get the stops for every vehicle route.
    */
   const getVehicleStops = async () => {
-    type VehicleStop = {
-      entity: string
-      id: string
-      stops: {
-        [key: string]: {
-          lat: string
-          lon: string
-          routeId: string
-          stopId: string
-          stopName: string
-        }
-      }[]
-    }
     /* the stops are grouped by route id */
     const params = {
       TableName,
@@ -97,7 +69,7 @@ export const dynamoServiceProvider = (
       ExpressionAttributeValues: { ":pk": "stop", ":sk": "route_id_" },
     }
     const { Items } = await dynamodb.query(params).promise()
-    const [Item] = Items as VehicleStop[]
+    const [Item] = Items as Dynamo.VehicleStopItem[]
     return Item?.stops ?? {}
     // return { stops, vehicleStopApiCount: 0 }
   }
@@ -125,8 +97,26 @@ export const dynamoServiceProvider = (
    * prediction items and the number of vehicles in each one is fully
    * controlled by the shape of the vehicle status item.
    */
-  const getVehiclePredictions = async () => {
-    const ExpressionAttributeValues = { ":pk": "prediction" }
+  const getActivePredictions = async (groupId?: number) => {
+    const KeyConditionExpression = groupId
+      ? "#pk = :pk AND #sk = :sk"
+      : "#pk = :pk"
+    const ExpressionAttributeValues = groupId
+      ? { ":pk": "active-predictions", ":sk": groupId }
+      : { ":pk": "active-predictions" }
+    const params = {
+      TableName,
+      KeyConditionExpression,
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
+    }
+    const { Items } = await dynamodb.query(params).promise()
+    return Items as Dynamo.PredictionItem[]
+  }
+
+  const getDormantPredictions = async () => {
+    const KeyConditionExpression = "#pk = :pk"
+    const ExpressionAttributeValues = { ":pk": "dormant-predictions" }
     const params = {
       TableName,
       KeyConditionExpression,
@@ -141,19 +131,17 @@ export const dynamoServiceProvider = (
    * Map an item to the format of a batch write request.
    * @param Item
    */
-  const toPutRequest = <T>(Item: T) => ({
-    PutRequest: { Item },
-  })
+  const toPutRequest = <T>(Item: T) => ({ PutRequest: { Item } })
 
   /**
    * Create an item for the main table.
    * @param Item
    */
   const createItem = ({
-    pk,
-    sk,
+    pk: pk,
+    sk: sk,
     ...rest
-  }: Dynamo.PrimaryKey & Dynamo.Item) => ({
+  }: Dynamo.CreateItemParams & Dynamo.Item) => ({
     [PARTITION_KEY]: pk,
     [SORT_KEY]: sk,
     ...rest,
@@ -173,10 +161,10 @@ export const dynamoServiceProvider = (
    * @param Item
    */
   const createHistoryItem = ({
-    pk,
-    sk,
+    pk: pk,
+    sk: sk,
     ...rest
-  }: Dynamo.PrimaryKey & Dynamo.Item) => ({
+  }: Dynamo.CreateItemParams & Dynamo.Item) => ({
     [HIST_PARTITION_KEY]: pk,
     [HIST_SORT_KEY]: sk,
     ...rest,
@@ -201,7 +189,8 @@ export const dynamoServiceProvider = (
     getMapMarkers,
     getVehicleStops,
     getVehicleStatus,
-    getVehiclePredictions,
+    getActivePredictions,
+    getDormantPredictions,
     toPutRequest,
     createItem,
     writeItem,
