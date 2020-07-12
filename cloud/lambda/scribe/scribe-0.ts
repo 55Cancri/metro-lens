@@ -56,22 +56,12 @@ export const scribe = (deps: Deps) => async (
   const batchedVehicleParams = apiUtils.getApiParams(chunkedVehicleIds)
 
   /* get the vehicle location for each batch of vehicle ids */
-  const vehiclesPromise = scribeUtils.getApiResponse(
+  const vehicles = await scribeUtils.getApiResponse<
+    Api.ConnectorVehicleOrError
+  >("vehicles", {
     api,
-    batchedVehicleParams
-  ) as Promise<Api.ConnectorVehicleOrError[]>
-
-  /* get the vehicle predictions for each batch of vehicle ids */
-  const predictionsPromise = scribeUtils.getApiResponse(
-    api,
-    batchedVehicleParams
-  ) as Promise<Api.ConnectorPredictionOrError[]>
-
-  /* wait for the vehicle and prediction responses to come in */
-  const [vehicles, predictions] = await Promise.all([
-    vehiclesPromise,
-    predictionsPromise,
-  ])
+    batchedVehicleParams,
+  })
 
   /* create the active and dormant vehicle status */
   const activeVehicleStatus = scribeUtils.getVehicleStatus(
@@ -94,7 +84,15 @@ export const scribe = (deps: Deps) => async (
   })
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
-  /* ----------- update predictions and locations of active vehicles ---------- */
+  /* --------------- update predictions of active vehicles only --------------- */
+
+  /* get the vehicle predictions for each batch of vehicle ids */
+  const predictions = await scribeUtils.getApiResponse<
+    Api.ConnectorPredictionOrError
+  >("predictions", {
+    api,
+    batchedVehicleParams,
+  })
 
   /* create the predictions map */
   const predictionMap = scribeUtils.createPredictionMap(predictions, { date })

@@ -34,6 +34,24 @@ export const apiServiceProvider = ({
       })
 
   /**
+   * Make an api call to get the vehicle predictions.
+   * @param params
+   */
+  const getVehiclePredictions = async (params: Api.HttpClientConnectorParams) =>
+    httpClient
+      .get(URLS.connector.predictions, {
+        headers: { "Content-Type": "application/json" },
+        params,
+      })
+      .then(
+        ({ data }) => data["bustime-response"] as Api.ConnectorApiPrediction
+      )
+      .catch((error) => {
+        winston.error(error)
+        throw new Error("Predictions Api Error")
+      })
+
+  /**
    * Perform a mutation for the prediction sets, one at a time.
    * @param params
    * @param predictionSet
@@ -365,6 +383,7 @@ export const apiServiceProvider = ({
     getVehicles,
     getActiveVehicles,
     getVehicleLocations,
+    getVehiclePredictions,
     getEveryVehicleStop,
     getEveryMapMarker,
     triggerVehicleMutation,

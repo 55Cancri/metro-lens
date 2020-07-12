@@ -69,49 +69,106 @@ export const getVehicleIds = (flatStatus: Dynamo.PredictionIdStatus) => {
   )
 }
 
+type ApiType = "vehicles" | "predictions"
+
+type Params = {
+  api: Deps["api"]
+  batchedVehicleParams: Api.HttpClientConnectorParams[]
+}
+
+type Cond<T> = T extends Api.ConnectorApiVehicle
+  ? Api.ConnectorVehicleOrError[]
+  : T extends Api.ConnectorApiPrediction
+  ? Api.ConnectorPredictionOrError[]
+  : never
+
+type CondB<T extends "vehicle" | "prediction"> = T extends "vehicle"
+  ? Api.ConnectorVehicleOrError[]
+  : T extends "prediction"
+  ? Api.ConnectorPredictionOrError[]
+  : never
+
+type Overload = {
+  <T extends Api.ConnectorApiVehicle>(
+    type: "vehicles",
+    params: Params
+  ): Api.ConnectorVehicleOrError
+  <T extends Api.ConnectorApiPrediction>(
+    type: "predictions",
+    params: Params
+  ): Api.ConnectorPredictionOrError
+}
+
 /**
  * Get the API responses for a list of vehicle ids.
  */
-export const getApiResponse = async (
-  api: Deps["api"],
-  batchedVehicleIds: Api.HttpClientConnectorParams[]
-) => {
-  const response = (await Promise.all(
-    batchedVehicleIds.map(api.getVehicleLocations)
-  )) as (Api.ConnectorApiVehicle | Api.ConnectorApiPrediction)[]
+export const getApiResponse = async <
+  T
+  // Overload
+  // T extends Api.ConnectorVehicleOrError | Api.ConnectorPredictionOrError
+  // T extends Api.ConnectorApiVehicle | Api.ConnectorApiPrediction
+>(
+  type: ApiType,
+  { api, batchedVehicleParams }: Params
+): Promise<T[]> =>
+  // ): Promise<
+  //   T extends "prediction"
+  //     ? Api.ConnectorPredictionOrError[]
+  //     : Api.ConnectorVehicleOrError[]
+  {
+    // ): Promise<Cond<T>> => {
+    if (type === "vehicles") {
+      const response = (await Promise.all(
+        batchedVehicleParams.map(api.getVehicleLocations)
+      )) as Api.ConnectorApiVehicle[]
 
-  type ConnectorList =
-    | Api.ConnectorVehicle
-    | Api.ConnectorPrediction
-    | Api.ConnectorError
+      // @ts-ignore
+      return response.reduce<T[]>((store, vehicle) => {
+        /* handle vehicle */
+        if ("vehicle" in vehicle && vehicle.error) {
+          return [...store, ...vehicle.vehicle!, ...vehicle.error]
+        }
 
-  return response.reduce((store, vehicle) => {
-    /* handle vehicle */
-    if ("vehicle" in vehicle && vehicle.error) {
-      return [...store, ...vehicle.vehicle!, ...vehicle.error]
+        if ("vehicle" in vehicle) {
+          return [...store, ...vehicle.vehicle!]
+        }
+
+        /* handle exclusive errors */
+        if ("error" in vehicle) {
+          return [...store, ...vehicle.error]
+        }
+
+        return store
+      }, [])
     }
 
-    if ("vehicle" in vehicle) {
-      return [...store, ...vehicle.vehicle!]
+    if (type === "predictions") {
+      const response = (await Promise.all(
+        batchedVehicleParams.map(api.getVehiclePredictions)
+      )) as Api.ConnectorApiPrediction[]
+
+      // @ts-ignore
+      return response.reduce<T[]>((store, vehicle) => {
+        /* handle predictions */
+        if ("prd" in vehicle && vehicle.error) {
+          return [...store, ...vehicle.prd!, ...vehicle.error]
+        }
+
+        if ("prd" in vehicle) {
+          return [...store, ...vehicle.prd!]
+        }
+
+        /* handle exclusive errors */
+        if ("error" in vehicle) {
+          return [...store, ...vehicle.error]
+        }
+
+        return store
+      }, [])
     }
 
-    /* handle predictions */
-    if ("prd" in vehicle && vehicle.error) {
-      return [...store, ...vehicle.prd!, ...vehicle.error]
-    }
-
-    if ("prd" in vehicle) {
-      return [...store, ...vehicle.prd!]
-    }
-
-    /* handle exclusive errors */
-    if ("error" in vehicle) {
-      return [...store, ...vehicle.error]
-    }
-
-    return store
-  }, [] as ConnectorList[])
-}
+    return []
+  }
 
 export const getVehicleStatus = (
   vehicles: Api.ConnectorVehicleOrError[],

@@ -1,12 +1,12 @@
-import aws from 'aws-sdk'
-import util from 'util'
-import * as utils from './utils'
-import { PutItemInput } from 'aws-sdk/clients/dynamodb'
-import * as R from 'ramda'
-const region = 'us-east-1'
+import aws from "aws-sdk"
+import util from "util"
+import * as utils from "./utils"
+import { PutItemInput } from "aws-sdk/clients/dynamodb"
+import * as R from "ramda"
+const region = "us-east-1"
 
 /* use dev nonprod account */
-const profile = 'default'
+const profile = "default"
 
 /* set credentials */
 const credentials = new aws.SharedIniFileCredentials({ profile })
@@ -18,9 +18,9 @@ aws.config.credentials = credentials
 /* create dynamo instance */
 const dynamoDb = new aws.DynamoDB.DocumentClient()
 /* define the table name */
-const TableName = 'metro'
+const TableName = "metro"
 
-type PrimaryKey = Record<'entity' | 'id', string>
+type PrimaryKey = Record<"entity" | "id", string>
 
 type Route = {
   lastUpdateTime: string
@@ -42,24 +42,24 @@ export type Status = {
 }
 
 type OldPredictionItem = {
-  entity: 'bus' | string
-  id: 'predictions' | string
+  entity: "bus" | string
+  id: "predictions" | string
   routes: { [key: string]: Route }
 }
 
-type PredictionItem = OldPredictionItem & { allBuses: string[] }
+type PredictionItem = OldPredictionItem & { allVehicles: string[] }
 
 type BusPredictionItem = {
   Items: OldPredictionItem[]
 }
 
 type OldStatusItem = {
-  entity: 'bus' | string
-  id: 'status' | string
+  entity: "bus" | string
+  id: "status" | string
   status: { [key: string]: Status }
 }
 
-type StatusItem = OldStatusItem & { allBuses: string[] }
+type StatusItem = OldStatusItem & { allVehicles: string[] }
 
 type BusStatusItem = {
   Items: OldStatusItem[]
@@ -67,29 +67,31 @@ type BusStatusItem = {
 
 const getParams = (sortKey: string) => ({
   TableName,
-  KeyConditionExpression: '#pk = :pk AND #sk = :sk',
-  ExpressionAttributeNames: { '#pk': 'entity', '#sk': 'id' },
-  ExpressionAttributeValues: { ':pk': 'bus', ':sk': sortKey },
+  KeyConditionExpression: "#pk = :pk AND #sk = :sk",
+  ExpressionAttributeNames: { "#pk": "entity", "#sk": "id" },
+  ExpressionAttributeValues: { ":pk": "bus", ":sk": sortKey },
 })
 
-const putItem = (Item: unknown) =>
-  dynamoDb.put({
-    TableName,
-    Item: Item,
-  } as PutItemInput)
+const putItem = async (Item: unknown) =>
+  dynamoDb
+    .put({
+      TableName,
+      Item: Item,
+    } as PutItemInput)
+    .promise()
 
 const getVehicleIds = <T extends object>(value: T) =>
   Object.keys(value).map((key) => {
     /* split the key to get the ending vehicle id */
-    const [, vehicleId] = key.split('_')
+    const [, vehicleId] = key.split("_")
 
     return vehicleId
   })
 
 /* run the main function */
-const run = async (): Promise<void> => {
+const run = async () => {
   /* define the params object */
-  const predictionsParams = getParams('predictions')
+  const predictionsParams = getParams("predictions")
 
   /* query the table for api counts in the date range */
   const predictionResults = (await dynamoDb
@@ -124,11 +126,10 @@ const run = async (): Promise<void> => {
   const activePredictionItems = chunkedActiveBuses.reduce(
     (store, activeBusesList, i) => {
       const routes = Object.fromEntries(activeBusesList)
-      const allBuses = Object.keys(routes)
-      const entity = 'predictions'
+      const allVehicles = Object.keys(routes)
+      const entity = "active-predictions"
       const id = String(i + 1)
-      const item = { entity, id, routes, allBuses }
-
+      const item = { entity, id, routes, allVehicles }
       return [...store, item]
     },
     [] as PredictionItem[]
@@ -138,11 +139,10 @@ const run = async (): Promise<void> => {
   const dormantPredictionItems = chunkedDormantBuses.reduce(
     (store, dormantBusesList, i) => {
       const routes = Object.fromEntries(dormantBusesList)
-      const allBuses = Object.keys(routes)
-      const entity = 'predictions'
+      const allVehicles = Object.keys(routes)
+      const entity = "dormant-predictions"
       const id = String(i + 1)
-      const item = { entity, id, routes, allBuses }
-
+      const item = { entity, id, routes, allVehicles }
       return [...store, item]
     },
     [] as PredictionItem[]
@@ -165,7 +165,7 @@ const run = async (): Promise<void> => {
   // console.log(predictionResponseItems)
 
   /* define the params object */
-  const statusParams = getParams('status')
+  const statusParams = getParams("status")
 
   /* query the table for api counts in the date range */
   const statusResults = (await dynamoDb
@@ -227,26 +227,44 @@ const run = async (): Promise<void> => {
   // console.log({ configureStatus })
 
   /* create the updated bus status item */
-  const busStatusItem = {
-    entity: 'bus',
-    id: 'status',
-    active: activeStatus,
-    dormant: dormantStatus,
-  }
-
-  utils.trace(busStatusItem)
+  // const busStatusItem =
+  // type PutItem = aws.DynamoDB.DocumentClient.PutItemInput
+  // type Error = aws.AWSError
 
   /* store the active prediction sets */
-  // await Promise.all(activePredictionItems.map(putItem))
+  await Promise.all(activePredictionItems.map(putItem))
+  // await activePredictionItems.reduce(
+  //   async (store, item) => store.then(() => putItem(item)),
+  //   Promise.resolve([])
+  // )
+  // Promise.resolve(undefined) as Promise<Request<PutItem, Error>>
+
+  console.log("Active predictions.")
 
   /* store the dormant prediction sets */
-  // await Promise.all(dormantPredictionItems.map(putItem))
+  await Promise.all(dormantPredictionItems.map(putItem))
+
+  console.log("Dormant predictions.")
+
+  console.log("Uploading status item.")
+
+  const params = {
+    TableName,
+    Item: {
+      entity: "vehicle",
+      id: "status",
+      active: activeStatus,
+      dormant: dormantStatus,
+    },
+  }
+
+  // utils.trace(params)
 
   /* write the new bus status object to dynamodb */
-  // return dynamoDb.put(busStatusItem)
+  return dynamoDb.put(params).promise()
 }
 
 /* execute program and catch errors */
 run()
-  .then(() => console.log('Done.'))
+  .then(() => console.log("Done."))
   .catch((error: Error) => console.error(error))
