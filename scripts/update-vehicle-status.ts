@@ -122,6 +122,15 @@ const run = async () => {
   /* chunk the dormant buses into 250 items */
   const chunkedDormantBuses = utils.chunk(inactiveBuses, 250)
 
+  chunkedActiveBuses.map((list) =>
+    utils.trace(Object.keys(Object.fromEntries(list)).join(", "))
+  )
+  chunkedDormantBuses.map((list) =>
+    utils.trace(Object.keys(Object.fromEntries(list)).join(", "))
+  )
+  // chunkedActiveBuses.map((list) => console.log(list.join(", ") + "\n"))
+  // chunkedDormantBuses.map((list) => console.log(list.join(", ") + "\n"))
+
   /* create the new prediction items for the active buses */
   const activePredictionItems = chunkedActiveBuses.reduce(
     (store, activeBusesList, i) => {
@@ -231,20 +240,11 @@ const run = async () => {
   // type PutItem = aws.DynamoDB.DocumentClient.PutItemInput
   // type Error = aws.AWSError
 
-  /* store the active prediction sets */
-  await Promise.all(activePredictionItems.map(putItem))
   // await activePredictionItems.reduce(
   //   async (store, item) => store.then(() => putItem(item)),
   //   Promise.resolve([])
   // )
   // Promise.resolve(undefined) as Promise<Request<PutItem, Error>>
-
-  console.log("Active predictions.")
-
-  /* store the dormant prediction sets */
-  await Promise.all(dormantPredictionItems.map(putItem))
-
-  console.log("Dormant predictions.")
 
   console.log("Uploading status item.")
 
@@ -260,8 +260,14 @@ const run = async () => {
 
   // utils.trace(params)
 
-  /* write the new bus status object to dynamodb */
-  return dynamoDb.put(params).promise()
+  // /* store the active prediction sets */
+  // await Promise.all(activePredictionItems.map(putItem))
+
+  // /* store the dormant prediction sets */
+  // await Promise.all(dormantPredictionItems.map(putItem))
+
+  // /* write the new bus status object to dynamodb */
+  // return dynamoDb.put(params).promise()
 }
 
 /* execute program and catch errors */

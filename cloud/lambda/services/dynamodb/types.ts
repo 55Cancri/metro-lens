@@ -18,22 +18,30 @@ export type Item = Record<string, unknown>
 export type VehicleStatus = {
   isActive: boolean
   wentOffline: string | null
-  predictionItemId?: string
+  predictionGroupId?: string
+  statusGroupName?: string
 }
 
 export type PredictionStatus = {
   [vehicleId: string]: VehicleStatus
 }
 
-export type PredictionIdStatus = {
-  [vehicleId: string]: VehicleStatus & { predictionItemId: number }
+export type MetadataPredictionStatus = {
+  [vehicleId: string]: Required<VehicleStatus>
 }
 
-export type Status = { [predictionId: string]: PredictionStatus }
+export type PredictionEntry = [string, PredictionStatus]
 
+export type Status = {
+  [predictionId: string]: PredictionStatus
+}
+
+// TODO: remove allVehicleIds as they don't exist on the pk=vehicle,sk=status item
 export type VehicleStatusItem = {
   active: Status
   dormant: Status
+  // active: Status & { allVehicleIds: string[] }
+  // dormant: Status & { allVehicleIds: string[] }
 }
 
 export type Prediction = {
@@ -59,7 +67,7 @@ export type VehiclePredictionItem = {
 
 export type PredictionItem = PrimaryKey & VehiclePredictionItem
 
-export type StatusItem = PrimaryKey & { status: VehicleStatusItem }
+// export type StatusItem = PrimaryKey & { status: VehicleStatusItem }
 
 export type VehicleStop = {
   routeId: string

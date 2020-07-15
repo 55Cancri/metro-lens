@@ -58,14 +58,14 @@ export const apiServiceProvider = ({
    */
   const triggerVehicleMutation = (
     params: Record<"endpoint" | "apiKey", string>,
-    predictionSet: number
+    predictionGroupId: number
   ) => {
     /* send a post request to appsync, which will then trigger the vehicle lambda */
     return httpClient.post(
       params.endpoint,
       {
-        query: `mutation updateBusPositions($page: Int) {
-          updateBusPositions(page: $page) {
+        query: `mutation updateVehiclePositions($page: Int) {
+          updateVehiclePositions(page: $page) {
               vehicleId
               rt
               lat
@@ -79,7 +79,7 @@ export const apiServiceProvider = ({
               }
           }
       }`,
-        variables: { input: { predictionSet } },
+        variables: { input: { predictionGroupId } },
       },
       {
         headers: {
@@ -387,5 +387,6 @@ export const apiServiceProvider = ({
     getEveryVehicleStop,
     getEveryMapMarker,
     triggerVehicleMutation,
+    testMutation,
   }
 }

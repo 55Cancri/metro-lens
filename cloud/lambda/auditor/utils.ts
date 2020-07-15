@@ -16,23 +16,23 @@ const MAX_DYNAMO_REQUESTS = 25
 
 /**
  * Flatten the prediction item by making the `vehicleId` the
- * key and adding the original `predictionItemId` key to the
+ * key and adding the original `predictionGroupId` key to the
  * prediction item itself so that it can later be used to
  * determine which prediction set this vehicle id belongs to.
  * @param entries
  * @example
  *  { '1': [vehicleId]: { predictionItem } } ->
- *  { [vehicleId]: { ...predictionItem, predictionItemId: '1' } }
+ *  { [vehicleId]: { ...predictionItem, predictionGroupId: '1' } }
  */
 export const flattenStatusItem = (entries: StatusTuple[]) =>
-  entries.reduce((store, [predictionItemId, predictionItemValue]) => {
+  entries.reduce((store, [predictionGroupId, predictionItemValue]) => {
     /* convert the vehicle prediction object into a list of tuples */
     const predictionItemEntries = Object.entries(predictionItemValue)
     const flatVehicles = predictionItemEntries.reduce(
       (store, [vehicleId, vehicleStatus]) => ({
         ...store,
-        // adding the predictionItemId here is the key to it all
-        [vehicleId]: { ...vehicleStatus, predictionItemId },
+        // adding the predictionGroupId here is the key to it all
+        [vehicleId]: { ...vehicleStatus, predictionGroupId },
       }),
       {} as Dynamo.PredictionStatus
     )
@@ -85,7 +85,7 @@ type StatusParams = {
  * Note that both the `flatVehicleStatus` and the `vehicleStatus` are the same data.
  * The difference is that the vehicle status is either the dormant or active object
  * in its raw form, and the flatVehicleStatus is that object, but flattened so that
- * `vehicleId` is the key rather than the `predictionItemId` and the `predictionItemId`
+ * `vehicleId` is the key rather than the `predictionGroupId` and the `predictionGroupId`
  * is a property on each item.
  * @param awakenedVehiclesId
  * @param params
@@ -97,15 +97,15 @@ export const getVehicleStatusItem = (
   awakenedVehiclesId.reduce((store, vehicleId, i) => {
     const errorKey = `error-getting-prediction-item-id-${i}`
     /* get the prediction id of the vehicle from the flattened vehicle status */
-    const { predictionItemId = errorKey } = flatVehicleStatus[vehicleId]
+    const { predictionGroupId = errorKey } = flatVehicleStatus[vehicleId]
     // const { predictionItemId } = flatVehicleStatus[vehicle.vid]
 
     /* get the previous state of this prediction */
-    const predictionItem = store[predictionItemId]
+    const predictionItem = store[predictionGroupId]
     const activeStatus = { isActive: true, wentOffline: null }
     return {
       ...store,
-      [predictionItemId]: { ...predictionItem, [vehicleId]: activeStatus },
+      [predictionGroupId]: { ...predictionItem, [vehicleId]: activeStatus },
     }
   }, initialVehicleStatus)
 

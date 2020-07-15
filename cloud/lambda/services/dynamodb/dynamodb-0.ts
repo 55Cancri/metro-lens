@@ -87,8 +87,10 @@ export const dynamoServiceProvider = (
       ExpressionAttributeValues,
     }
     const { Items } = await dynamodb.query(params).promise()
-    const [Item] = Items as [Dynamo.StatusItem]
-    const statusOfVehicles = Item?.status ?? {}
+    const [Item] = Items as [Dynamo.VehicleStatusItem]
+    const statusOfVehicles = (Item?.active && Item?.dormant
+      ? Item
+      : {}) as Dynamo.VehicleStatusItem
     return { statusOfVehicles, routeApiCount: 0 }
   }
 

@@ -36,15 +36,17 @@ export const scribe = (deps: Deps) => async (
 
   const { statusOfVehicles, routeApiCount } = vehicleStatus
 
+  const flatVehicleStatus = scribeUtils.flattenStatusItem(statusOfVehicles)
+
   /* extract the active and dormant prediction sets */
-  const { active, dormant } = statusOfVehicles
+  // const { active, dormant } = statusOfVehicles
 
   /* flatten the active and dormant vehicle status' */
-  const flatActiveStatus = scribeUtils.flattenStatusItem(active)
-  const flatDormantStatus = scribeUtils.flattenStatusItem(dormant)
+  // const flatActiveStatus = scribeUtils.flattenStatusItem(active)
+  // const flatDormantStatus = scribeUtils.flattenStatusItem(dormant)
 
   /* flatten the vehicle status */
-  const flatVehicleStatus = { ...flatActiveStatus, ...flatDormantStatus }
+  // const flatVehicleStatus = { ...flatActiveStatus, ...flatDormantStatus }
 
   /* get the vehicle ids of the active vehicles */
   const activeVehicleIds = scribeUtils.getVehicleIds(flatVehicleStatus)
@@ -62,13 +64,22 @@ export const scribe = (deps: Deps) => async (
     api,
     batchedVehicleParams, // vehicles where `isActive=true`
   })
+  // console.log({
+  //   activeVehicleIds,
+  //   flatVehicleStatus,
+  //   flatDormantStatus,
+  //   flatActiveStatus,
+  // })
+
+  console.log("Number of vehicles:", vehicles.length)
 
   /* create the active and dormant vehicle status */
-  const activeVehicleStatus = scribeUtils.getVehicleStatus(
-    vehicles,
-    flatVehicleStatus,
-    flatActiveStatus
-  )
+  // const activeVehicleStatus = scribeUtils.updateVehicleStatus(
+  //   vehicles,
+  //   flatVehicleStatus,
+  //   flatActiveStatus
+  // )
+  console.log("AFTER CREATION OF ACTIVE VEHICLE STATUS.")
   // TODO: wrong because it updates wentOffline property for dormant vehicles to current time
   // TODO: probably can delete as may be handled by auditor
   // const dormantVehicleStatus = scribeUtils.getVehicleStatus(
@@ -77,14 +88,27 @@ export const scribe = (deps: Deps) => async (
   //   flatDormantStatus
   // )
 
+  const updatedFlatStatus = scribeUtils.updateFlatStatusItem(
+    vehicles,
+    flatVehicleStatus
+  )
+
+  const { active, dormant } = scribeUtils.assembleStatusItem(updatedFlatStatus)
+
   /* create the vehicle status item */
   const vehicleStatusItem = dynamodb.createItem({
     pk: "vehicle",
     sk: "status",
-    active: activeVehicleStatus,
-    dormant, // TODO: probably can delete as may be handled by auditor
-    // dormant: dormantVehicleStatus,
+    active,
+    dormant,
   })
+  // const vehicleStatusItem = dynamodb.createItem({
+  //   pk: "vehicle",
+  //   sk: "status",
+  //   active: activeVehicleStatus,
+  //   dormant, // TODO: probably can delete as may be handled by auditor
+  //   // dormant: dormantVehicleStatus,
+  // })
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
   /* --------------- update predictions of active vehicles only --------------- */

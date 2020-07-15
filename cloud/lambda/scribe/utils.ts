@@ -1,6 +1,9 @@
+import R from "ramda"
+
 import * as Api from "../types/api"
 import * as Dynamo from "../services/dynamodb/types"
 import { Deps } from "../depency-injector"
+
 import * as unicornUtils from "../utils/unicorns"
 
 const { winston } = unicornUtils
@@ -32,35 +35,119 @@ type PredictionMap = Record<string, Dynamo.Prediction[]>
  *  ...
  * }
  */
-export const flattenStatusItem = (
-  status: Dynamo.Status
-): Dynamo.PredictionIdStatus => {
-  // convert to: [ ['1', { '7708': { isActive, wentOffline }, '7710': { ... } } ], ... ]
-  const entries = Object.entries(status)
+// export const flattenStatusItem = (
+//   status: Dynamo.Status
+// ): Dynamo.PredictionIdStatus => {
+//   // convert to: [ ['1', { '7708': { isActive, wentOffline }, '7710': { ... } } ], ... ]
+//   const entries = Object.entries(status)
 
-  return entries.reduce((outerStore, [predictionItemId, vehicle]) => {
-    // convert to: [ ['7708', { isActive, wentOffline }], ['7710', { ... } ] ]
-    const predictionItemEntries = Object.entries(vehicle)
+//   return entries.reduce((outerStore, [predictionItemId, vehicle]) => {
+//     // convert to: [ ['7708', { isActive, wentOffline }], ['7710', { ... } ] ]
+//     const predictionItemEntries = Object.entries(vehicle)
 
-    // convert to: { '7708', { isActive, wentOffline, predictionItemId }, { '7710': { ... } } }
-    const flatVehicles = predictionItemEntries.reduce(
-      (innerStore, [vehicleId, vehicleStatus]) => ({
-        ...innerStore,
-        [vehicleId]: { ...vehicleStatus, predictionItemId },
-      }),
-      {}
-    )
+//     // convert to: { '7708', { isActive, wentOffline, predictionItemId }, { '7710': { ... } } }
+//     const flatVehicles = predictionItemEntries.reduce(
+//       (innerStore, [vehicleId, vehicleStatus]) => ({
+//         ...innerStore,
+//         [vehicleId]: { ...vehicleStatus, predictionItemId },
+//       }),
+//       {}
+//     )
+//     return { ...outerStore, ...flatVehicles }
+//   }, {})
+// }
 
-    return { ...outerStore, ...flatVehicles }
-  }, {})
+const flatten = (
+  statusGroupName: "active" | "dormant",
+  predictionEntries: Dynamo.PredictionEntry[]
+) =>
+  predictionEntries.reduce(
+    (store, [predictionGroupId, predictionItemValue]) => {
+      const predictionItemEntries = Object.entries(predictionItemValue)
+      const flatVehicles = predictionItemEntries.reduce(
+        (store, [vehicleId, vehicleStatus]) => ({
+          ...store,
+          [vehicleId]: { ...vehicleStatus, predictionGroupId, statusGroupName },
+        }),
+        {}
+      ) as Dynamo.MetadataPredictionStatus
+      return { ...store, ...flatVehicles }
+    },
+    {} as Dynamo.MetadataPredictionStatus
+  )
+
+export const flattenStatusItem = (statusItem: Dynamo.VehicleStatusItem) => {
+  const { active, dormant } = statusItem
+  // const { active: initialActive, dormant: initialDormant } = statusItem
+  // const active = R.omit(["allVehicleIds"], initialActive)
+  // const dormant = R.omit(["allVehicleIds"], initialDormant)
+  const activeBusEntries = Object.entries(active)
+  const dormantBusEntries = Object.entries(dormant)
+  const activeFlatStatus = flatten("active", activeBusEntries)
+  const dormantFlatStatus = flatten("dormant", dormantBusEntries)
+  return { ...activeFlatStatus, ...dormantFlatStatus }
 }
+
+export const updateFlatStatusItem = (
+  vehicles: Api.ConnectorVehicleOrError[],
+  flatStatusItem: Dynamo.MetadataPredictionStatus
+) =>
+  vehicles.reduce((store, vehicle) => {
+    const vehicleItem = store[vehicle.vid]
+    // const { predictionItemId } = store[vehicle.vid]
+
+    if ("msg" in vehicle) {
+      return {
+        ...store,
+        [vehicle.vid]: {
+          ...vehicleItem,
+          isActive: false,
+          wentOffline: new Date().toISOString(),
+        },
+      }
+    }
+
+    return {
+      ...store,
+      [vehicle.vid]: {
+        ...vehicleItem,
+        isActive: true,
+        wentOffline: null,
+      },
+    }
+  }, flatStatusItem)
+
+export const assembleStatusItem = (
+  updatedFlatStatus: Dynamo.MetadataPredictionStatus
+) =>
+  Object.entries(updatedFlatStatus).reduce(
+    (store, [vehicleId, vehicleStatus]) => {
+      const { predictionGroupId, statusGroupName, ...status } = vehicleStatus
+      const statusGroup = (store[statusGroupName as keyof typeof store] ??
+        {}) as Dynamo.Status
+      const predictionItem = (statusGroup[predictionGroupId] ??
+        {}) as Dynamo.PredictionStatus
+      const vehicleItem = predictionItem[vehicleId] ?? {}
+      return {
+        ...statusGroup,
+        [statusGroupName]: {
+          [predictionGroupId]: {
+            ...predictionItem,
+            // TODO: vehicleItem may not be needed
+            [vehicleId]: { ...vehicleItem, ...status },
+          },
+        },
+      } as Dynamo.VehicleStatusItem
+    },
+    {} as Dynamo.VehicleStatusItem
+  )
 
 /**
  * A vehicle is active if its `isActive` property is `true`,
  * otherwise it is discarded.
- * @param {Dynamo.PredictionIdStatus} flatStatus the flat map of vehicle ids
+ * @param {Dynamo.MetadataPredictionStatus} flatStatus the flat map of vehicle ids
  */
-export const getVehicleIds = (flatStatus: Dynamo.PredictionIdStatus) => {
+export const getVehicleIds = (flatStatus: Dynamo.MetadataPredictionStatus) => {
   return Object.entries(flatStatus).reduce(
     (store, [key, { isActive }]) => (isActive ? [...store, key] : store),
     [] as string[]
@@ -134,24 +221,36 @@ export const getApiResponse = async <T>(
   return []
 }
 
-export const getVehicleStatus = (
+// function takes the active vehicles (obtained from both the active and dormant objects)
+// and the original active and dormant objects
+//
+
+export const updateVehicleStatus = (
   vehicles: Api.ConnectorVehicleOrError[],
-  flatVehicleStatus: Dynamo.PredictionIdStatus,
-  flatInitialStatus: Dynamo.PredictionIdStatus
+  flatVehicleStatus: Dynamo.MetadataPredictionStatus,
+  flatInitialStatus: Dynamo.MetadataPredictionStatus
 ) =>
   vehicles.reduce(
     (store, vehicle) => {
+      console.log({
+        vid: vehicle.vid,
+        aVehicle: vehicle,
+        inFlatMaybeDormant: Object.keys(flatVehicleStatus).includes(
+          vehicle.vid
+        ),
+      })
       /* get the prediction id of the vehicle from the flattened vehicle status */
-      const { predictionItemId } = flatInitialStatus[vehicle.vid]
+      const { predictionGroupId = "" } = flatInitialStatus[vehicle.vid]
+      console.log("AFTER VEHICLE.")
 
       /* get the previous state of this prediction */
-      const predictionItem = store[predictionItemId]
+      const predictionItem = store[predictionGroupId]
 
       /* there was an error */
       if ("msg" in vehicle) {
         return {
           ...store,
-          [predictionItemId]: {
+          [predictionGroupId]: {
             ...predictionItem,
             [vehicle.vid]: {
               isActive: false,
@@ -163,7 +262,7 @@ export const getVehicleStatus = (
 
       return {
         ...store,
-        [predictionItemId]: {
+        [predictionGroupId]: {
           ...predictionItem,
           [vehicle.vid]: { isActive: true, wentOffline: null },
         },
