@@ -16,7 +16,7 @@ input LoginInput {
 }
 
 input VehicleInput {
-  predictionSet: Int!
+  predictionGroupId: String!
 }
 
 type FavoriteStop {
@@ -80,7 +80,7 @@ type Query {
 type Mutation {
   registerUser(input: RegisterInput!): LoginResponse!
   loginUser(input: LoginInput!): LoginResponse!
-  updateVehiclePositions(input: VehicleInput!): [Vehicle!]
+  updateVehiclePositions(input: VehicleInput): [Vehicle!]
   testMutation: Test
 }
 

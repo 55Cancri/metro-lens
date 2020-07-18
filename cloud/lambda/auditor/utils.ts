@@ -136,7 +136,7 @@ export const groupVehicleStopsByRoute = (vehicleStops: Dynamo.VehicleStop[]) =>
 
       const warning = `Found duplicate data for stopId ${vehicleStop.stopId} in route ${vehicleStop.routeId}. Skipping.`
       /* log error as two stops with the same stop id should not exist for a route */
-      winston.info(warning)
+      // winston.info(warning)
       return store
     }
 

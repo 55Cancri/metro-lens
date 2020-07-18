@@ -23,7 +23,7 @@ export type LoginInput = {
 }
 
 export type VehicleInput = {
-  predictionSet: Scalars["Int"]
+  predictionGroupId: Scalars["String"]
 }
 
 export type FavoriteStop = {
@@ -109,7 +109,7 @@ export type MutationLoginUserArgs = {
 }
 
 export type MutationUpdateVehiclePositionsArgs = {
-  input: VehicleInput
+  input?: Maybe<VehicleInput>
 }
 
 export type Subscription = {

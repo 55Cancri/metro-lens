@@ -78,11 +78,6 @@ const flatten = (
 
 export const flattenStatusItem = (statusItem: Dynamo.VehicleStatusItem) => {
   const { active, dormant } = statusItem
-  console.log({
-    statusItemType: typeof statusItem,
-    activeType: typeof active,
-    dormantType: typeof dormant,
-  })
   const activeBusEntries = Object.entries(active)
   const dormantBusEntries = Object.entries(dormant)
   const activeFlatStatus = flatten("active", activeBusEntries)
@@ -235,16 +230,8 @@ export const updateVehicleStatus = (
 ) =>
   vehicles.reduce(
     (store, vehicle) => {
-      console.log({
-        vid: vehicle.vid,
-        aVehicle: vehicle,
-        inFlatMaybeDormant: Object.keys(flatVehicleStatus).includes(
-          vehicle.vid
-        ),
-      })
       /* get the prediction id of the vehicle from the flattened vehicle status */
       const { predictionGroupId = "" } = flatInitialStatus[vehicle.vid]
-      console.log("AFTER VEHICLE.")
 
       /* get the previous state of this prediction */
       const predictionItem = store[predictionGroupId]

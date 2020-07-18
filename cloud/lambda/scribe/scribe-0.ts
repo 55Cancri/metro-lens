@@ -120,11 +120,19 @@ export const scribe = (deps: Deps) => async (
       endpoint: GRAPHQL_ENDPOINT,
       apiKey: GRAPHQL_API_KEY,
     }
-    const mutationResult = api.triggerVehicleMutation(
-      mutationParams,
-      Number(predictionItemId)
-    )
-    await Promise.all([saveVehicle, saveHistory, mutationResult])
+    await api
+      .triggerVehicleMutation(mutationParams, String(predictionItemId))
+      .then((result) => {
+        console.log("Finished dispatching mutation with: ")
+        console.log({
+          config: Object.keys(result.data),
+          data: result.data.data,
+          errors: result.data.errors,
+        })
+      })
+    console.log("Trigger mutation with: ")
+    console.log({ mutationParams, predictionItemId })
+    await Promise.all([saveVehicle, saveHistory])
 
     // TODO: somehow, only the unused vehicles should be returned, that way
     // TODO: you can later create new prediction items with the leftovers

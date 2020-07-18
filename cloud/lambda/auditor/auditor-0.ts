@@ -33,10 +33,7 @@ export const auditor = (deps: Deps) => async (
 
   /* parse out the active and dormant statuses */
   const { statusOfVehicles } = vehicleStatus
-  const {
-    active: { allVehicleIds: _, ...active },
-    dormant: { allVehicleIds: __, ...dormant },
-  } = statusOfVehicles
+  const { active, dormant } = statusOfVehicles
   const activeVehicleEntries = Object.entries(active)
   const dormantVehicleEntries = Object.entries(dormant)
 
