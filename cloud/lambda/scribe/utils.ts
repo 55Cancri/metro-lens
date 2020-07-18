@@ -59,11 +59,11 @@ type PredictionMap = Record<string, Dynamo.Prediction[]>
 
 const flatten = (
   statusGroupName: "active" | "dormant",
-  predictionEntries: Dynamo.PredictionEntry[]
+  statusGroupEntries: Dynamo.PredictionEntry[]
 ) =>
-  predictionEntries.reduce(
-    (store, [predictionGroupId, predictionItemValue]) => {
-      const predictionItemEntries = Object.entries(predictionItemValue)
+  statusGroupEntries.reduce(
+    (store, [predictionGroupId, predictionVehicles]) => {
+      const predictionItemEntries = Object.entries(predictionVehicles)
       const flatVehicles = predictionItemEntries.reduce(
         (store, [vehicleId, vehicleStatus]) => ({
           ...store,
@@ -78,14 +78,16 @@ const flatten = (
 
 export const flattenStatusItem = (statusItem: Dynamo.VehicleStatusItem) => {
   const { active, dormant } = statusItem
-  // const { active: initialActive, dormant: initialDormant } = statusItem
-  // const active = R.omit(["allVehicleIds"], initialActive)
-  // const dormant = R.omit(["allVehicleIds"], initialDormant)
+  console.log({
+    statusItemType: typeof statusItem,
+    activeType: typeof active,
+    dormantType: typeof dormant,
+  })
   const activeBusEntries = Object.entries(active)
   const dormantBusEntries = Object.entries(dormant)
   const activeFlatStatus = flatten("active", activeBusEntries)
   const dormantFlatStatus = flatten("dormant", dormantBusEntries)
-  return { ...activeFlatStatus, ...dormantFlatStatus }
+  return { ...dormantFlatStatus, ...activeFlatStatus }
 }
 
 export const updateFlatStatusItem = (
@@ -129,8 +131,9 @@ export const assembleStatusItem = (
         {}) as Dynamo.PredictionStatus
       const vehicleItem = predictionItem[vehicleId] ?? {}
       return {
-        ...statusGroup,
+        ...store,
         [statusGroupName]: {
+          ...statusGroup,
           [predictionGroupId]: {
             ...predictionItem,
             // TODO: vehicleItem may not be needed

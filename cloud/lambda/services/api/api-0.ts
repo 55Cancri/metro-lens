@@ -168,6 +168,9 @@ export const apiServiceProvider = ({
    * @param params
    */
   const getActiveVehicles = async (params: Api.HttpClientConnectorParams) => {
+    console.log(
+      "api-0.ts, 171, getActiveVehicles: Please don't tell me its making API call for every vehicle."
+    )
     /* make api call to get the vehicles for every route */
     const vehicles = await getVehiclesForEveryRoute(params)
 

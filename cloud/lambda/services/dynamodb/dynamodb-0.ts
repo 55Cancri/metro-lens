@@ -88,9 +88,12 @@ export const dynamoServiceProvider = (
     }
     const { Items } = await dynamodb.query(params).promise()
     const [Item] = Items as [Dynamo.VehicleStatusItem]
-    const statusOfVehicles = (Item?.active && Item?.dormant
-      ? Item
-      : {}) as Dynamo.VehicleStatusItem
+    // const hasActiveAndDormant = Item?.active && Item?.dormant
+    // const statusOfVehicles = (hasActiveAndDormant
+    //   ? Item
+    //   : {}) as Dynamo.VehicleStatusItem
+    // const hasActiveAndDormant = Item?.active && Item?.dormant
+    const statusOfVehicles = Item as Dynamo.VehicleStatusItem
     return { statusOfVehicles, routeApiCount: 0 }
   }
 
@@ -106,12 +109,15 @@ export const dynamoServiceProvider = (
     const ExpressionAttributeValues = groupId
       ? { ":pk": "active-predictions", ":sk": groupId }
       : { ":pk": "active-predictions" }
+    const ExpressionAttributeNames = groupId
+      ? { "#pk": PARTITION_KEY, "#sk": SORT_KEY }
+      : { "#pk": PARTITION_KEY }
     const params = {
       TableName,
       KeyConditionExpression,
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-    }
+    } as Dynamo.QueryParams
     const { Items } = await dynamodb.query(params).promise()
     return Items as Dynamo.PredictionItem[]
   }

@@ -29,27 +29,17 @@ export const scribe = (deps: Deps) => async (
 
   /* define the api params in case the api call needs to be made */
   const params = { key: CONNECTOR_KEY, format: "json" } as const
-
-  const vehicleStatus = objectUtils.objectIsEmpty(previousVehicleStatusItem)
+  const statusItemIsEmpty = objectUtils.objectIsEmpty(
+    previousVehicleStatusItem.statusOfVehicles
+  )
+  const vehicleStatus = statusItemIsEmpty
     ? await api.getActiveVehicles(params)
     : previousVehicleStatusItem
-
   const { statusOfVehicles, routeApiCount } = vehicleStatus
-
-  const flatVehicleStatus = scribeUtils.flattenStatusItem(statusOfVehicles)
-
-  /* extract the active and dormant prediction sets */
-  // const { active, dormant } = statusOfVehicles
-
-  /* flatten the active and dormant vehicle status' */
-  // const flatActiveStatus = scribeUtils.flattenStatusItem(active)
-  // const flatDormantStatus = scribeUtils.flattenStatusItem(dormant)
-
-  /* flatten the vehicle status */
-  // const flatVehicleStatus = { ...flatActiveStatus, ...flatDormantStatus }
+  const flatStatusItem = scribeUtils.flattenStatusItem(statusOfVehicles)
 
   /* get the vehicle ids of the active vehicles */
-  const activeVehicleIds = scribeUtils.getVehicleIds(flatVehicleStatus)
+  const activeVehicleIds = scribeUtils.getVehicleIds(flatStatusItem)
 
   /* chunk the vehicle ids into lengths of 10, the limit in a single api call */
   const chunkedVehicleIds = listUtils.chunk(activeVehicleIds, 10)
@@ -64,35 +54,10 @@ export const scribe = (deps: Deps) => async (
     api,
     batchedVehicleParams, // vehicles where `isActive=true`
   })
-  // console.log({
-  //   activeVehicleIds,
-  //   flatVehicleStatus,
-  //   flatDormantStatus,
-  //   flatActiveStatus,
-  // })
-
-  console.log("Number of vehicles:", vehicles.length)
-
-  /* create the active and dormant vehicle status */
-  // const activeVehicleStatus = scribeUtils.updateVehicleStatus(
-  //   vehicles,
-  //   flatVehicleStatus,
-  //   flatActiveStatus
-  // )
-  console.log("AFTER CREATION OF ACTIVE VEHICLE STATUS.")
-  // TODO: wrong because it updates wentOffline property for dormant vehicles to current time
-  // TODO: probably can delete as may be handled by auditor
-  // const dormantVehicleStatus = scribeUtils.getVehicleStatus(
-  //   vehicles,
-  //   flatVehicleStatus,
-  //   flatDormantStatus
-  // )
-
   const updatedFlatStatus = scribeUtils.updateFlatStatusItem(
     vehicles,
-    flatVehicleStatus
+    flatStatusItem
   )
-
   const { active, dormant } = scribeUtils.assembleStatusItem(updatedFlatStatus)
 
   /* create the vehicle status item */
@@ -102,13 +67,6 @@ export const scribe = (deps: Deps) => async (
     active,
     dormant,
   })
-  // const vehicleStatusItem = dynamodb.createItem({
-  //   pk: "vehicle",
-  //   sk: "status",
-  //   active: activeVehicleStatus,
-  //   dormant, // TODO: probably can delete as may be handled by auditor
-  //   // dormant: dormantVehicleStatus,
-  // })
   const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
 
   /* --------------- update predictions of active vehicles only --------------- */
@@ -152,6 +110,7 @@ export const scribe = (deps: Deps) => async (
       routes,
       TTL: date.setTTLExpirationIn({ days: 1 }),
     })
+
     const saveVehicle = dynamodb.writeItem(vehicleItem)
     const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
 
@@ -179,8 +138,7 @@ export const scribe = (deps: Deps) => async (
   const previousApiTotal = await dynamodb.getApiCountTotal()
   const sessionApiCount = routeApiCount + vehicleApiCount + predictionsApiCount
   const totalApiCount = Number(previousApiTotal) + sessionApiCount
-  // const apiCallSummary = `Api Calls :: Routes: ${routeApiCount}. Vehicles: ${vehicleApiCount}. Predictions: ${predictionsApiCount}.`
-  // winston.info(apiCallSummary)
+
   const totalApiCountItem = dynamodb.createItem({
     pk: "api_count",
     sk: "total",

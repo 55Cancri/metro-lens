@@ -47,7 +47,8 @@ type OldPredictionItem = {
   routes: { [key: string]: Route }
 }
 
-type PredictionItem = OldPredictionItem & { allVehicles: string[] }
+type PredictionItem = OldPredictionItem
+// type PredictionItem = OldPredictionItem & { allVehicles: string[] }
 
 type BusPredictionItem = {
   Items: OldPredictionItem[]
@@ -59,7 +60,8 @@ type OldStatusItem = {
   status: { [key: string]: Status }
 }
 
-type StatusItem = OldStatusItem & { allVehicles: string[] }
+type StatusItem = OldStatusItem
+// type StatusItem = OldStatusItem & { allVehicles: string[] }
 
 type BusStatusItem = {
   Items: OldStatusItem[]
@@ -135,10 +137,11 @@ const run = async () => {
   const activePredictionItems = chunkedActiveBuses.reduce(
     (store, activeBusesList, i) => {
       const routes = Object.fromEntries(activeBusesList)
-      const allVehicles = Object.keys(routes)
+      // const allVehicles = Object.keys(routes)
       const entity = "active-predictions"
       const id = String(i + 1)
-      const item = { entity, id, routes, allVehicles }
+      const item = { entity, id, routes }
+      // const item = { entity, id, routes, allVehicles }
       return [...store, item]
     },
     [] as PredictionItem[]
@@ -148,10 +151,11 @@ const run = async () => {
   const dormantPredictionItems = chunkedDormantBuses.reduce(
     (store, dormantBusesList, i) => {
       const routes = Object.fromEntries(dormantBusesList)
-      const allVehicles = Object.keys(routes)
+      // const allVehicles = Object.keys(routes)
       const entity = "dormant-predictions"
       const id = String(i + 1)
-      const item = { entity, id, routes, allVehicles }
+      const item = { entity, id, routes }
+      // const item = { entity, id, routes, allVehicles }
       return [...store, item]
     },
     [] as PredictionItem[]
@@ -202,12 +206,14 @@ const run = async () => {
       }, {})
 
       /* update the list of all of the vehicle ids */
-      const allVehicleIds = [...store.allVehicleIds, ...vehicleIds]
+      // const allVehicleIds = [...store.allVehicleIds, ...vehicleIds]
 
       /* return the finalized status object */
-      return { ...store, [predictionSet.id]: vehicleStatus, allVehicleIds }
+      return { ...store, [predictionSet.id]: vehicleStatus }
+      // return { ...store, [predictionSet.id]: vehicleStatus, allVehicleIds }
     },
-    { allVehicleIds: [] } as { allVehicleIds: string[] }
+    {} as { allVehicleIds: string[] }
+    // { allVehicleIds: [] } as { allVehicleIds: string[] }
   )
 
   const dormantStatus = dormantPredictionItems.reduce(
@@ -225,12 +231,14 @@ const run = async () => {
       }, {})
 
       /* update the list of all of the vehicle ids */
-      const allVehicleIds = [...store.allVehicleIds, ...vehicleIds]
+      // const allVehicleIds = [...store.allVehicleIds, ...vehicleIds]
 
       /* return the finalized status object */
-      return { ...store, [predictionSet.id]: vehicleStatus, allVehicleIds }
+      return { ...store, [predictionSet.id]: vehicleStatus }
+      // return { ...store, [predictionSet.id]: vehicleStatus, allVehicleIds }
     },
-    { allVehicleIds: [] } as { allVehicleIds: string[] }
+    {} as { allVehicleIds: string[] }
+    // { allVehicleIds: [] } as { allVehicleIds: string[] }
   )
 
   // console.log({ configureStatus })
@@ -267,7 +275,7 @@ const run = async () => {
   // await Promise.all(dormantPredictionItems.map(putItem))
 
   // /* write the new bus status object to dynamodb */
-  // return dynamoDb.put(params).promise()
+  return dynamoDb.put(params).promise()
 }
 
 /* execute program and catch errors */

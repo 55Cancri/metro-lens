@@ -339,6 +339,7 @@ export class MetroLensStack extends cdk.Stack {
     new events.Rule(this, "scribeSchedule", {
       description:
         "Call a lambda to poll wmata and fairfax connector apis to get the latest bus and rail predictions. The lambda will trigger an appsync mutation and save the latest data to dynamodb.",
+      /* run the scribe lambda every minute */
       schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       /* attach the lambda to the schedule */
       targets: [scribeTarget],
@@ -376,6 +377,7 @@ export class MetroLensStack extends cdk.Stack {
     new events.Rule(this, "auditorSchedule", {
       description:
         "Call the auditor lambda to make sure all vehicle ids are accounted for.",
+      /* call the auditor lambda once every hour */
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
       /* attach the lambda to the schedule */
       targets: [auditorTarget],
