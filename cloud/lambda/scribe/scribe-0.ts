@@ -88,7 +88,7 @@ export const scribe = (deps: Deps) => async (
   /*create a timestamp for the current moment */
   const lastUpdateTime = date.getNowInISO()
 
-  predictionItems.reduce(async (store, pastItem) => {
+  await predictionItems.reduce(async (store, pastItem) => {
     const flattenedPredictions = await store
     const { id: predictionItemId, allVehicles } = pastItem
     const routes = scribeUtils.createVehicleStruct(flattenedPredictions, {
@@ -96,12 +96,14 @@ export const scribe = (deps: Deps) => async (
       pastVehicles: pastItem,
       lastUpdateTime,
     })
+
     const vehicleItem = dynamodb.createItem({
-      pk: "active-prediction",
+      pk: "active-predictions",
       sk: predictionItemId,
       allVehicles,
       routes,
     })
+
     const vehicleHistoryItem = dynamodb.createHistoryItem({
       pk: "vehicle_predictions_history",
       sk: date.getNowInISO(),
@@ -120,19 +122,12 @@ export const scribe = (deps: Deps) => async (
       endpoint: GRAPHQL_ENDPOINT,
       apiKey: GRAPHQL_API_KEY,
     }
-    await api
-      .triggerVehicleMutation(mutationParams, String(predictionItemId))
-      .then((result) => {
-        console.log("Finished dispatching mutation with: ")
-        console.log({
-          config: Object.keys(result.data),
-          data: result.data.data,
-          errors: result.data.errors,
-        })
-      })
-    console.log("Trigger mutation with: ")
-    console.log({ mutationParams, predictionItemId })
-    await Promise.all([saveVehicle, saveHistory])
+    const triggerSubscription = api.triggerVehicleMutation(
+      mutationParams,
+      String(predictionItemId)
+    )
+
+    await Promise.all([saveVehicle, saveHistory, triggerSubscription])
 
     // TODO: somehow, only the unused vehicles should be returned, that way
     // TODO: you can later create new prediction items with the leftovers

@@ -109,7 +109,7 @@ export type MutationLoginUserArgs = {
 }
 
 export type MutationUpdateVehiclePositionsArgs = {
-  input?: Maybe<VehicleInput>
+  input: VehicleInput
 }
 
 export type Subscription = {

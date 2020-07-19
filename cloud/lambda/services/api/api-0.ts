@@ -64,7 +64,8 @@ export const apiServiceProvider = ({
     return httpClient.post(
       params.endpoint,
       {
-        query: `mutation updateVehiclePositions($input: VehicleInput) {
+        /* input types do not need to be defined, just named exactly as schema */
+        query: `mutation updateVehiclePositions($input: VehicleInput!) {
           updateVehiclePositions(input: $input) {
               vehicleId
               rt
@@ -79,7 +80,6 @@ export const apiServiceProvider = ({
               }
           }
       }`,
-        // variables: { predictionGroupId },
         variables: { input: { predictionGroupId } },
       },
       {

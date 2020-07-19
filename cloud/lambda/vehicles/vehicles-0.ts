@@ -13,7 +13,7 @@ export const vehicles = (deps: Deps) => async (
   const { predictionGroupId } = event?.arguments.input!
   const predictions = await dynamodb.getActivePredictions(predictionGroupId)
 
-  console.log("PREDICTION LENGTH: ", predictions.length)
+  // console.log("PREDICTION LENGTH: ", predictions.length)
   const [prediction] = predictions
 
   /* convert the large bus predictions object into an array */
