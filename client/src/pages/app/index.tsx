@@ -33,7 +33,7 @@ export const App: React.FC = () => (
   <ApolloProvider client={client}>
     <AppContext.AppProvider>
       <UserContext.UserProvider>
-        <Global styles={styles.global} />
+        <Global styles={styles.app} />
         <Router />
       </UserContext.UserProvider>
     </AppContext.AppProvider>
