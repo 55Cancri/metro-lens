@@ -184,6 +184,8 @@ export const getApiResponse = async <T>(
 
       /* handle exclusive errors */
       if ("error" in vehicle) {
+        console.log("ERROR! ERROR!")
+        console.log(vehicle.error)
         return [...store, ...vehicle.error]
       }
 
@@ -209,6 +211,8 @@ export const getApiResponse = async <T>(
 
       /* handle exclusive errors */
       if ("error" in vehicle) {
+        console.log("ERROR! ERROR!")
+        console.log(vehicle.error)
         return [...store, ...vehicle.error]
       }
 

@@ -1,13 +1,9 @@
-import { Deps } from "../depency-injector"
+import { Deps, ApiDep, DateDep, DynamoDep } from "../depency-injector"
 import * as Dynamo from "../services/dynamodb/types"
 import * as Api from "../services/api/types"
 
 import { winston } from "../utils/unicorns"
 import * as listUtils from "../utils/lists"
-
-type ApiDep = { api: Deps["api"] }
-type DateDep = { date: Deps["date"] }
-type DynamoDep = { dynamodb: Deps["dynamodb"] }
 
 type StatusTuple = [string, Dynamo.PredictionStatus]
 

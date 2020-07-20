@@ -3,15 +3,23 @@ import React from "react"
 import { useHistory } from "react-router-dom"
 import { motion } from "framer-motion"
 import { jsx } from "@emotion/core"
-import axios from "axios"
 import * as L from "react-leaflet"
+import axios from "axios"
 
-import * as urls from "../../constants/urls"
-import * as variants from "../../constants/variants"
+import { Header } from "./components/header"
+import { Refocus } from "./components/refocus"
+// import { VehicleMarkers } from "./components/vehicle-markers"
+
 import { useDimensions } from "../../hooks/use-dimensions"
 import * as apolloHooks from "../../types/apollo-hooks"
-import * as sideEffects from "./methods/side-effects"
-import { styles } from "./styles"
+import * as transformations from "./utils/transformations"
+import * as sideEffects from "./utils/side-effects"
+import * as variants from "../../constants/variants"
+import * as urls from "../../constants/urls"
+import * as styles from "./styles"
+
+import { LatLngExpression, LeafletEvent } from "leaflet"
+
 /**
  * Maps:
  * CartoDB.Voyager
@@ -19,13 +27,9 @@ import { styles } from "./styles"
  *
  */
 
-type UserPosition = {
-  lat: number
-  lon: number
-  zoom: number
-}
+type ViewPosition = Record<"lat" | "lon" | "zoom", number>
 
-export type Point = Omit<UserPosition, "zoom">
+export type Point = Omit<ViewPosition, "zoom">
 
 const x = {
   // user location
@@ -54,41 +58,109 @@ const x = {
 }
 
 export const DashboardPage: React.FC = () => {
-  const [loading, setLoading] = React.useState(true)
-  const [userPosition, setUserPosition] = React.useState<Partial<UserPosition>>(
+  const [loadingLocation, setLoadingLocation] = React.useState(true)
+  const [userPosition, setUserPosition] = React.useState<Partial<ViewPosition>>(
     {}
   )
+  const [viewPosition, setViewPosition] = React.useState<Partial<ViewPosition>>(
+    {}
+  )
+  const [vehicles, setVehicles] = React.useState(new Map())
   const [mapLink, setMapLink] = React.useState("")
-  const vehicleSubscription = apolloHooks.useOnUpdateVehiclePositionsSubscription()
-  const testSubscription = apolloHooks.useTestedMutationSubscription()
-  // const [mapRef, mapDimensions] = useDimensions()
 
-  console.log("VEHICLE SUBSCRIPTION: ")
-  console.log({ vehicleSubscription })
+  const {
+    loading: loadingInitialVehicles,
+    data: initialVehicleData,
+  } = apolloHooks.useGetVehiclePositionsQuery()
+  const {
+    loading: loadingUpdatedVehicles,
+    data: updatedVehicleData,
+  } = apolloHooks.useOnUpdateVehiclePositionsSubscription()
+
+  // const [mapRef, mapDimensions] = useDimensions()
 
   const history = useHistory()
 
-  const handleLogout = () => {
+  const { getVehiclePositions: initialVehicles } = initialVehicleData ?? {}
+  const { onUpdateVehiclePositions: updatedVehicles } = updatedVehicleData ?? {}
+
+  /**
+   * Continuously track the user's geolocation.
+   * @param {Point} point
+   */
+  const setInitialUserLocation = ({ lat, lon }: Point) => {
+    const zoom = 16
+    setViewPosition({ lat, lon, zoom })
+    setUserPosition({ lat, lon, zoom })
+    setMapLink(`https://www.openstreetmap.org/#map=18/${lat}/${lon}`)
+    return setLoadingLocation(false)
+  }
+
+  const setUpdatedUserLocation = ({ lat, lon }: Point) => {
+    setUserPosition({ ...userPosition, lat, lon })
+    setMapLink(`https://www.openstreetmap.org/#map=18/${lat}/${lon}`)
+  }
+
+  /**
+   * Start tracking the user's position on load.
+   */
+  const onLoad = () => {
+    sideEffects.setInitialUserLocation(setInitialUserLocation)
+    const id = sideEffects.trackUserLocation(setUpdatedUserLocation)
+    return () => sideEffects.stopTrackingUserLocation(id!)
+  }
+
+  const onInitialVehicles = () => {
+    const vehicleUpdates = transformations.updateVehicleMap(
+      initialVehicles,
+      vehicles
+    )
+    return setVehicles(vehicleUpdates)
+  }
+  const onUpdatedVehicles = () => {
+    const vehicleUpdates = transformations.updateVehicleMap(
+      updatedVehicles,
+      vehicles
+    )
+    return setVehicles(vehicleUpdates)
+  }
+
+  /* keep track of map center */
+  const onMove = (e: LeafletEvent) => {
+    const { lat, lng: lon } = e.target.getCenter()
+    const zoom = e.target.getZoom()
+    const updatedViewPosition = { lat, lon, zoom }
+    console.log("Updating view position.")
+    return setViewPosition(updatedViewPosition)
+  }
+
+  const onRefocus = () => setViewPosition({ ...userPosition, zoom: 16 })
+
+  /**
+   * Clear session tokens on logout.
+   */
+  const onLogout = () => {
     localStorage.removeItem("jwt")
     return history.push("/")
   }
 
-  const setLocalState = ({ lat, lon }: Point) => {
-    const zoom = 16
-    setUserPosition({ lat, lon, zoom })
-    setMapLink(`https://www.openstreetmap.org/#map=18/${lat}/${lon}`)
-    return setLoading(false)
-  }
+  React.useEffect(onLoad, [])
+  React.useEffect(onInitialVehicles, [initialVehicles])
+  React.useEffect(onUpdatedVehicles, [updatedVehicles])
 
-  React.useEffect(() => {
-    const id = sideEffects.trackUserPosition(setLocalState)
-    // return stopTrackingUserPosition(id)
-  }, [])
+  /* loading */
+  const isLoading = loadingLocation || loadingInitialVehicles
+  if (isLoading) return <motion.p>Loading...</motion.p>
 
-  if (loading) return <motion.p>Loading...</motion.p>
+  console.log({ vehicles })
 
-  // console.log({ mapDimensions })
+  /* dark mode */
+  const isNightTime = new Date().getHours() > 20
+  const mapTheme = isNightTime ? urls.darkMap : urls.lightMap
 
+  /* map center and user marker */
+  const mapCenter = [viewPosition.lat, viewPosition.lon] as LatLngExpression
+  const userMarker = [userPosition.lat, userPosition.lon] as LatLngExpression
   return (
     <motion.div
       css={styles.layout}
@@ -97,36 +169,50 @@ export const DashboardPage: React.FC = () => {
       animate="enter"
       exit="exit"
     >
-      <header>
+      {/* <header>
         <h1>Metro Lens</h1>
         <nav>
           <button>Map</button>
           <button>Favorites</button>
           <button>Search</button>
-          <button onClick={handleLogout}>Logout</button>
+          <button onClick={onLogout}>Logout</button>
         </nav>
         <input css={styles.input} />
-      </header>
+      </header> */}
       <main>
-        <div>
-          <h2>Home to Dunn-Loring</h2>
-          <a href={mapLink}>link</a>
-        </div>
-
+        <Header />
+        <Refocus onClick={onRefocus} />
         <L.Map
-          style={{ height: 500, width: "100%" }}
-          center={[userPosition.lat!, userPosition.lon!]}
-          zoom={userPosition.zoom}
-          ref={(node) =>
-            console.log({ node: node?.container?.getBoundingClientRect() })
-          }
+          css={styles.map}
+          center={mapCenter}
+          onmoveend={onMove}
+          zoom={viewPosition.zoom}
+          animate
+          // ref={(node) =>
+          //   console.log({ node: node?.container?.getBoundingClientRect() })
+          // }
         >
-          <L.TileLayer url={urls.lightMap} />
-          <L.Marker position={[userPosition.lat!, userPosition.lon!]}>
+          <L.TileLayer url={mapTheme} />
+          <L.Marker position={userMarker}>
             <L.Popup>
               A pretty CSS3 popup. <br /> Easily customizable.
             </L.Popup>
           </L.Marker>
+          {Array.from(vehicles.values()).map((vehicle) => {
+            const { rt, vehicleId, lat, lon } = vehicle
+            const key = `${rt}_${vehicleId}`
+            const vehicleMarker = [Number(lat), Number(lon)] as LatLngExpression
+            return (
+              <L.Marker key={key} position={vehicleMarker} title={vehicleId}>
+                <L.Popup>
+                  <p>{vehicleId}</p>
+                  <h1>{rt}</h1>
+                  A pretty CSS3 popup. <br /> Easily customizable.
+                </L.Popup>
+              </L.Marker>
+            )
+          })}
+          {/* <VehicleMarkers vehicles={vehicles!} /> */}
         </L.Map>
       </main>
     </motion.div>

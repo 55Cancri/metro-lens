@@ -54,6 +54,8 @@ export const scribe = (deps: Deps) => async (
     api,
     batchedVehicleParams, // vehicles where `isActive=true`
   })
+  console.log({ vehicles })
+
   const updatedFlatStatus = scribeUtils.updateFlatStatusItem(
     vehicles,
     flatStatusItem

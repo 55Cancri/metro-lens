@@ -74,6 +74,7 @@ type Test {
 type Query {
   getUser(id: ID!): User
   getUsers: [User]
+  getVehiclePositions: [Vehicle!]
   # getMap: Map
 }
 

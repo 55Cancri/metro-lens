@@ -1,0 +1,15 @@
+query getVehiclePositions {
+  getVehiclePositions {
+    vehicleId
+    rt
+    lat
+    lon
+    lastUpdateTime
+    predictions {
+      arrivalIn
+      arrivalTime
+      stopId
+      stopName
+    }
+  }
+}

@@ -275,6 +275,14 @@ export class MetroLensStack extends cdk.Stack {
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
 
+    /* appsync: mutation response is handled by the lambda */
+    vehicleDataSource.createResolver({
+      typeName: "Query",
+      fieldName: "getVehiclePositions",
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
     /* appsync: add dynamodb as a data source */
     // const lambdaTestMutationDataSource = graphql.addDynamoDbDataSource(
     //   'Test',

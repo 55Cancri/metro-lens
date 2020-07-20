@@ -86,6 +86,7 @@ export type Query = {
   __typename?: "Query"
   getUser?: Maybe<User>
   getUsers?: Maybe<Array<Maybe<User>>>
+  getVehiclePositions?: Maybe<Array<Vehicle>>
 }
 
 export type QueryGetUserArgs = {
@@ -116,6 +117,26 @@ export type Subscription = {
   __typename?: "Subscription"
   onUpdateVehiclePositions?: Maybe<Array<Vehicle>>
   testedMutation?: Maybe<Test>
+}
+
+export type GetVehiclePositionsQueryVariables = {}
+
+export type GetVehiclePositionsQuery = { __typename?: "Query" } & {
+  getVehiclePositions?: Maybe<
+    Array<
+      { __typename?: "Vehicle" } & Pick<
+        Vehicle,
+        "vehicleId" | "rt" | "lat" | "lon" | "lastUpdateTime"
+      > & {
+          predictions: Array<
+            { __typename?: "Prediction" } & Pick<
+              Prediction,
+              "arrivalIn" | "arrivalTime" | "stopId" | "stopName"
+            >
+          >
+        }
+    >
+  >
 }
 
 export type LoginUserMutationVariables = {
@@ -172,6 +193,71 @@ export type OnUpdateVehiclePositionsSubscription = {
   >
 }
 
+export const GetVehiclePositionsDocument = gql`
+  query getVehiclePositions {
+    getVehiclePositions {
+      vehicleId
+      rt
+      lat
+      lon
+      lastUpdateTime
+      predictions {
+        arrivalIn
+        arrivalTime
+        stopId
+        stopName
+      }
+    }
+  }
+`
+
+/**
+ * __useGetVehiclePositionsQuery__
+ *
+ * To run a query within a React component, call `useGetVehiclePositionsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetVehiclePositionsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetVehiclePositionsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetVehiclePositionsQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetVehiclePositionsQuery,
+    GetVehiclePositionsQueryVariables
+  >
+) {
+  return ApolloReactHooks.useQuery<
+    GetVehiclePositionsQuery,
+    GetVehiclePositionsQueryVariables
+  >(GetVehiclePositionsDocument, baseOptions)
+}
+export function useGetVehiclePositionsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetVehiclePositionsQuery,
+    GetVehiclePositionsQueryVariables
+  >
+) {
+  return ApolloReactHooks.useLazyQuery<
+    GetVehiclePositionsQuery,
+    GetVehiclePositionsQueryVariables
+  >(GetVehiclePositionsDocument, baseOptions)
+}
+export type GetVehiclePositionsQueryHookResult = ReturnType<
+  typeof useGetVehiclePositionsQuery
+>
+export type GetVehiclePositionsLazyQueryHookResult = ReturnType<
+  typeof useGetVehiclePositionsLazyQuery
+>
+export type GetVehiclePositionsQueryResult = ApolloReactCommon.QueryResult<
+  GetVehiclePositionsQuery,
+  GetVehiclePositionsQueryVariables
+>
 export const LoginUserDocument = gql`
   mutation loginUser($input: LoginInput!) {
     results: loginUser(input: $input) {

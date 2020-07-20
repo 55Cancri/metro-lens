@@ -20,6 +20,9 @@ export type Deps = {
   api: typeof api
   dynamodb: typeof dynamodb
 }
+export type ApiDep = { api: Deps["api"] }
+export type DateDep = { date: Deps["date"] }
+export type DynamoDep = { dynamodb: Deps["dynamodb"] }
 
 /* export the handler with dependencies injected */
 export const injectDependencies = (lambda: Function) =>
