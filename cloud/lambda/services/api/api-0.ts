@@ -1,5 +1,7 @@
-import * as Api from "./types"
+import * as listUtils from "../../utils/lists"
 import { winston } from "../../utils/unicorns"
+
+import * as Api from "./types"
 import * as Dynamo from "../dynamodb/types"
 
 const URLS = {
@@ -13,6 +15,10 @@ const URLS = {
   },
   wmata: { Predictions: "" },
 } as const
+
+const ACTIVE_PREDICTION_SET_SIZE = process.env.ACTIVE_PREDICTION_SET_SIZE
+  ? Number(process.env.ACTIVE_PREDICTION_SET_SIZE)
+  : 25
 
 export const apiServiceProvider = ({
   httpClient,
@@ -162,8 +168,8 @@ export const apiServiceProvider = ({
   }
 
   /**
-   * Determine all the active vehicles purely from making api calls, starting
-   * with the routes, then vehicles for each route, and then finally, parsing
+   * Get ALL of the active vehicles exclusively from api calls, starting
+   * with the routes, then vehicles for each route, and then finally, by parsing
    * out the vehicles that actually returned something. This is where the most
    * api calls occur.
    * @param params
@@ -172,17 +178,38 @@ export const apiServiceProvider = ({
     console.log(
       "api-0.ts, 171, getActiveVehicles: Please don't tell me its making API call for every vehicle."
     )
-    /* make api call to get the vehicles for every route */
+    // get the active vehicles for EVERY route
     const vehicles = await getVehiclesForEveryRoute(params)
+    const chunkedVehicles = listUtils.chunk(
+      vehicles,
+      ACTIVE_PREDICTION_SET_SIZE
+    )
 
-    /* create a map of the active vehicles returned from the api call */
-    const activeVehicles = vehicles.reduce(
-      (store, vehicle) => ({
-        ...store,
-        [vehicle.vid]: { isActive: true, wentOffline: null },
-      }),
+    // create a { 1: { 401_7712: { ... } } } giant object
+    const activeVehicles = chunkedVehicles.reduce(
+      (store, vehicleChunk, predictionItemId) => {
+        const predictionItem = vehicleChunk.reduce(
+          (innerStore, vehicle) => ({
+            ...innerStore,
+            [vehicle.vid]: { isActive: true, wentOffline: null },
+          }),
+          {}
+        )
+
+        return { ...store, [predictionItemId]: predictionItem }
+      },
       {}
     )
+
+    // /* create a map of the active vehicles returned from the api call */
+    // const activeVehicles = vehicles.reduce(
+    //   (store, vehicle) => ({
+    //     ...store,
+    //     [vehicle.vid]: { isActive: true, wentOffline: null },
+    //   }),
+    //   {}
+    // )
+
     const statusOfVehicles = {
       active: activeVehicles,
       dormant: {},

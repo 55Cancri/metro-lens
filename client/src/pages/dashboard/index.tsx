@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom"
 import { motion } from "framer-motion"
 import { jsx } from "@emotion/core"
 import * as L from "react-leaflet"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import axios from "axios"
 
 import { Header } from "./components/header"
@@ -152,10 +153,13 @@ export const DashboardPage: React.FC = () => {
   const isLoading = loadingLocation || loadingInitialVehicles
   if (isLoading) return <motion.p>Loading...</motion.p>
 
+  const target = vehicles.get("402_9700")
+  console.log({ lat: target?.lat, lon: target?.lon })
   console.log({ vehicles })
 
   /* dark mode */
-  const isNightTime = new Date().getHours() > 20
+  const hour = new Date().getHours()
+  const isNightTime = hour < 6 || hour > 20
   const mapTheme = isNightTime ? urls.darkMap : urls.lightMap
 
   /* map center and user marker */
@@ -187,29 +191,95 @@ export const DashboardPage: React.FC = () => {
           center={mapCenter}
           onmoveend={onMove}
           zoom={viewPosition.zoom}
+          zoomAnimation
+          useFlyTo
           animate
           // ref={(node) =>
           //   console.log({ node: node?.container?.getBoundingClientRect() })
           // }
         >
           <L.TileLayer url={mapTheme} />
-          <L.Marker position={userMarker}>
+          <L.Marker
+            css={{
+              color: "red",
+              backgroundColor: "red",
+              filter: "grayscale(100%);",
+            }}
+            position={userMarker}
+          >
             <L.Popup>
               A pretty CSS3 popup. <br /> Easily customizable.
             </L.Popup>
+            <L.Tooltip
+              direction="right"
+              offset={[-8, -2]}
+              opacity={1}
+              permanent
+            >
+              <span>You</span>
+            </L.Tooltip>
           </L.Marker>
           {Array.from(vehicles.values()).map((vehicle) => {
             const { rt, vehicleId, lat, lon } = vehicle
             const key = `${rt}_${vehicleId}`
             const vehicleMarker = [Number(lat), Number(lon)] as LatLngExpression
             return (
-              <L.Marker key={key} position={vehicleMarker} title={vehicleId}>
+              <L.Marker
+                key={key}
+                css={{
+                  filter: "grayscale(50%);",
+                }}
+                position={vehicleMarker}
+                title={vehicleId}
+              >
                 <L.Popup>
                   <p>{vehicleId}</p>
                   <h1>{rt}</h1>
                   A pretty CSS3 popup. <br /> Easily customizable.
                 </L.Popup>
+                <L.Tooltip
+                  direction="right"
+                  offset={[-8, -2]}
+                  opacity={1}
+                  permanent
+                >
+                  <div
+                    css={{
+                      display: "grid",
+                      alignItems: "center",
+                      gridTemplateColumns: "repeat(2, max-content)",
+                      gridColumnGap: 3,
+                      padding: "0 3px",
+                    }}
+                  >
+                    <h1
+                      css={{
+                        fontSize: ".7rem",
+                        margin: 0,
+                        padding: 0,
+                      }}
+                    >
+                      {rt}
+                    </h1>
+                    <p
+                      css={{
+                        fontSize: ".5rem",
+                        margin: 0,
+                        padding: 0,
+                      }}
+                    >
+                      ({vehicleId})
+                    </p>
+                  </div>
+                </L.Tooltip>
               </L.Marker>
+              // <L.Marker key={key} position={vehicleMarker} title={vehicleId}>
+              //   <L.Popup>
+              //     <p>{vehicleId}</p>
+              //     <h1>{rt}</h1>
+              //     A pretty CSS3 popup. <br /> Easily customizable.
+              //   </L.Popup>
+              // </L.Marker>
             )
           })}
           {/* <VehicleMarkers vehicles={vehicles!} /> */}

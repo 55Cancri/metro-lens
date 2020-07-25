@@ -337,6 +337,9 @@ export class MetroLensStack extends cdk.Stack {
         WMATA_KEY: String(process.env.WMATA_KEY),
         GRAPHQL_ENDPOINT: String(process.env.GRAPHQL_ENDPOINT),
         GRAPHQL_API_KEY: String(process.env.GRAPHQL_API_KEY),
+        ACTIVE_PREDICTION_SET_SIZE: String(
+          process.env.ACTIVE_PREDICTION_SET_SIZE
+        ),
       },
     })
 

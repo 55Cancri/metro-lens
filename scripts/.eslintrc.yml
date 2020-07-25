@@ -1,0 +1,16 @@
+globals:
+  node: true
+  jest: true
+
+extends:
+  - react-app
+  # all rules were off by default
+  - plugin:import/typescript
+  # enforces good testing practices
+  - plugin:jest/recommended
+  # adds some stylistic rules, such as prefer-to-be-null,
+  # which enforces usage of toBeNull over toBe(null)
+  - plugin:jest/style
+
+rules:
+  semi: 0

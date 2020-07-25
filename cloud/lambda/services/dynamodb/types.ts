@@ -60,8 +60,11 @@ export type Vehicle = {
   predictions?: Prediction[]
 }
 
+export type Routes = { [routeIdVehicleId: string]: Vehicle }
+
 export type VehiclePredictionItem = {
-  routes: { [routeIdVehicleId: string]: Vehicle }
+  /** The number of vehicles in each route id vehicle id is predetermined */
+  routes: Routes
   allVehicles: string[]
 }
 

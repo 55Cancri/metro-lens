@@ -10,6 +10,6 @@ type Props = {
 
 export const Refocus: React.FC<Props> = (props) => (
   <button css={styles.refocus} onClick={props.onClick}>
-    <FontAwesomeIcon icon="location-arrow" size="lg" />
+    <FontAwesomeIcon icon="map-pin" size="lg" />
   </button>
 )

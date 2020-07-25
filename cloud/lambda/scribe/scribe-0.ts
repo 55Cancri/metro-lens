@@ -1,5 +1,5 @@
 import * as lambda from "aws-lambda"
-import { winston } from "../utils/unicorns"
+import { winston, print } from "../utils/unicorns"
 
 /* import utils */
 import * as apiUtils from "../utils/api"
@@ -36,6 +36,7 @@ export const scribe = (deps: Deps) => async (
     ? await api.getActiveVehicles(params)
     : previousVehicleStatusItem
   const { statusOfVehicles, routeApiCount } = vehicleStatus
+
   const flatStatusItem = scribeUtils.flattenStatusItem(statusOfVehicles)
 
   /* get the vehicle ids of the active vehicles */
@@ -54,13 +55,33 @@ export const scribe = (deps: Deps) => async (
     api,
     batchedVehicleParams, // vehicles where `isActive=true`
   })
-  console.log({ vehicles })
+
+  // target a specific vehicle
+  // console.log(`active vids: ${activeVehicleIds.join(", ")}`)
+
+  // print(
+  //   vehicles.reduce((store, v) => {
+  //     if ("msg" in v) {
+  //       console.log("Incoming message: ", v.msg)
+  //       return store
+  //     }
+  //     return { ...store, [v.vid]: { lat: v.lat, lon: v.lon } }
+  //   }, {})
+  // )
 
   const updatedFlatStatus = scribeUtils.updateFlatStatusItem(
     vehicles,
     flatStatusItem
   )
-  const { active, dormant } = scribeUtils.assembleStatusItem(updatedFlatStatus)
+  const { active, dormant = {} } = scribeUtils.assembleStatusItem(
+    updatedFlatStatus
+  )
+
+  // print({ statusOfVehicles, routeApiCount })
+  // print({ newActive: active, routeApiCount })
+  console.log("Made a ton of api calls above.")
+  // print({ newActive: active, newDormant: dormant })
+  // print({ newActive: active, newDormant: dormant })
 
   /* create the vehicle status item */
   const vehicleStatusItem = dynamodb.createItem({
@@ -84,8 +105,14 @@ export const scribe = (deps: Deps) => async (
   /* create the predictions map */
   const predictionMap = scribeUtils.createPredictionMap(predictions, { date })
 
-  /* get the array of prediction items */
-  const predictionItems = await dynamodb.getActivePredictions()
+  // /* get the array of prediction items */
+  // const predictionItems = await dynamodb.getActivePredictions()
+  const predictionItems = await scribeUtils.getPredictionItems(vehicles, {
+    dynamodb,
+    predictionMap,
+  })
+
+  print({ finalPredictionItemsLength: predictionItems.length })
 
   /*create a timestamp for the current moment */
   const lastUpdateTime = date.getNowInISO()

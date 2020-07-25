@@ -5,8 +5,13 @@ import * as Dynamo from "../services/dynamodb/types"
 import { Deps } from "../depency-injector"
 
 import * as unicornUtils from "../utils/unicorns"
+import * as listUtils from "../utils/lists"
 
-const { winston } = unicornUtils
+const { print, winston } = unicornUtils
+
+const ACTIVE_PREDICTION_SET_SIZE = process.env.ACTIVE_PREDICTION_SET_SIZE
+  ? Number(process.env.ACTIVE_PREDICTION_SET_SIZE)
+  : 25
 
 type PredictionMap = Record<string, Dynamo.Prediction[]>
 
@@ -35,28 +40,26 @@ type PredictionMap = Record<string, Dynamo.Prediction[]>
  *  ...
  * }
  */
-// export const flattenStatusItem = (
-//   status: Dynamo.Status
-// ): Dynamo.PredictionIdStatus => {
-//   // convert to: [ ['1', { '7708': { isActive, wentOffline }, '7710': { ... } } ], ... ]
-//   const entries = Object.entries(status)
 
-//   return entries.reduce((outerStore, [predictionItemId, vehicle]) => {
-//     // convert to: [ ['7708', { isActive, wentOffline }], ['7710', { ... } ] ]
-//     const predictionItemEntries = Object.entries(vehicle)
-
-//     // convert to: { '7708', { isActive, wentOffline, predictionItemId }, { '7710': { ... } } }
-//     const flatVehicles = predictionItemEntries.reduce(
-//       (innerStore, [vehicleId, vehicleStatus]) => ({
-//         ...innerStore,
-//         [vehicleId]: { ...vehicleStatus, predictionItemId },
-//       }),
-//       {}
-//     )
-//     return { ...outerStore, ...flatVehicles }
-//   }, {})
-// }
-
+/**
+ * The issue is that normal status item looks like this:
+ * {
+ *  active: {
+ *    1: {
+ *      401_7712: { ... }
+ *    }
+ *  }
+ * }
+ *
+ * but fetching from api looks like this:
+ * {
+ *  active: {
+ *    7712: { ... }
+ *  }
+ * }
+ * @param statusGroupName
+ * @param statusGroupEntries
+ */
 const flatten = (
   statusGroupName: "active" | "dormant",
   statusGroupEntries: Dynamo.PredictionEntry[]
@@ -91,7 +94,6 @@ export const updateFlatStatusItem = (
 ) =>
   vehicles.reduce((store, vehicle) => {
     const vehicleItem = store[vehicle.vid]
-    // const { predictionItemId } = store[vehicle.vid]
 
     if ("msg" in vehicle) {
       return {
@@ -350,3 +352,87 @@ export const createVehicleStruct = (
     }
     return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
   }, pastVehicles.routes)
+
+/**
+ * Map all active vehicles obtained from the api call into
+ * dynamo vehicle objects keyed by routeIdVehicleId.
+ * @param vehicles
+ * @param param1
+ */
+const getPredictionList = (
+  vehicles: Api.ConnectorVehicleOrError[],
+  { predictionMap }: { predictionMap: PredictionMap }
+) =>
+  vehicles.reduce((store, vehicle) => {
+    if ("msg" in vehicle) return store
+    const { rt, vid: vehicleId, lat, lon } = vehicle
+    // treat all `routeIdVehicleIds` as a single unique vehicle
+    const routeIdVehicleId = `${rt}_${vehicleId}`
+    const predictions = predictionMap[routeIdVehicleId]
+    const lastUpdateTime = new Date().toISOString()
+    const locationAndPrediction = {
+      rt,
+      vehicleId,
+      lat,
+      lon,
+      lastUpdateTime,
+      predictions,
+    }
+    const routeIdVehicleIdItem = { [routeIdVehicleId]: locationAndPrediction }
+    return store.concat([routeIdVehicleIdItem])
+  }, [] as Dynamo.Routes[])
+
+/**
+ * Map the routeIdVehicleId objects into active-prediction items.
+ * @param chunkedPredictionList
+ */
+const createPredictionItems = (chunkedPredictionList: Dynamo.Routes[][]) =>
+  chunkedPredictionList.map((predictionChunk, i) => {
+    type InitialState = { routes: Dynamo.Routes; allVehicles: string[] }
+    const predictionItemId = i + 1
+
+    const { routes, allVehicles } = predictionChunk.reduce(
+      (store, routeIdVehicleId) => {
+        const [[key, vehicle]] = Object.entries(routeIdVehicleId)
+        const updatedRoutes = { ...store.routes, [key]: vehicle }
+        const [, vehicleId] = key.split("_")
+        const updatedVehicles = store.allVehicles.concat([vehicleId])
+        return { routes: updatedRoutes, allVehicles: updatedVehicles }
+      },
+      { routes: {}, allVehicles: [] } as InitialState
+    )
+
+    const entity = "active-predictions"
+    const id = String(predictionItemId)
+    const item = { entity, id, routes, allVehicles }
+    return item
+  })
+
+/**
+ * Get the active-prediction items from the database if they exist,
+ * or recreate them from the api vehicles and the prediction map.
+ */
+export const getPredictionItems = async (
+  vehicles: Api.ConnectorVehicleOrError[],
+  params: {
+    predictionMap: PredictionMap
+    dynamodb: Deps["dynamodb"]
+  }
+) => {
+  const { dynamodb, predictionMap } = params
+
+  // attempt to get existing active-prediction items
+  const predictionItems = await dynamodb.getActivePredictions()
+  if (predictionItems.length > 0) return predictionItems
+
+  const predictionList = getPredictionList(vehicles, { predictionMap })
+  const chunkedPredictionList = listUtils.chunk(
+    predictionList,
+    ACTIVE_PREDICTION_SET_SIZE
+  )
+
+  print({ chunkedPredictionListLength: chunkedPredictionList.length })
+
+  const createdPredictionItems = createPredictionItems(chunkedPredictionList)
+  return createdPredictionItems
+}
