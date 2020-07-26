@@ -114,10 +114,12 @@ export const LoginPage: React.FC = () => {
           <section>
             <button type="submit">Login</button>
             {error && <span className="error">{error}</span>}
-            <p>
-              <span>Need an account? </span>
-              <Link to="register">Register</Link>
-            </p>
+            <div>
+              <p>Need an account?</p>
+              <Link to="register">
+                <button>Register</button>
+              </Link>
+            </div>
           </section>
         </form>
       </main>

@@ -4,6 +4,7 @@ import { jsx } from "@emotion/core"
 import { motion } from "framer-motion"
 import { Link, useHistory } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import ReactPasswordStrength from "react-password-strength"
 import { useRegisterUserMutation } from "../../types/apollo-hooks"
 
 import * as UserContext from "../../context/user-context"
@@ -116,19 +117,34 @@ export const RegisterPage: React.FC = () => {
           </section>
           <section>
             <label htmlFor="password">Password</label>
-            <input
+            <ReactPasswordStrength
+              // style={{ display: "none" }}
+              // style={styles.input}
+              minLength={5}
+              minScore={2}
+              scoreWords={["weak", "okay", "good", "strong", "stronger"]}
+              changeCallback={(e: any) => console.log({ e })}
+              inputProps={{
+                name: "password_input",
+                autoComplete: "off",
+                className: "form-control",
+              }}
+            />
+            {/* <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
-            />
+            /> */}
           </section>
           <section>
             <button type="submit">Login</button>
             {error && <span className="error">{error}</span>}
             <p>
               <span>Already have an account? </span>
-              <Link to="login">Login</Link>
+              <Link to="login">
+                <button>Login</button>
+              </Link>
             </p>
           </section>
         </form>

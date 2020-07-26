@@ -3,11 +3,25 @@ import color from "color"
 // import * as colors from "../../constants/colors"
 
 // const lime = "#77ff94"
+const eerie = "#211e1c"
 const lime = "#7cf897"
 const focusBorder = `3px solid ${color(lime)
   .desaturate(0.5)
   .darken(0.4)
   .string()}`
+
+export const input = {
+  height: 45,
+  padding: "5px 15px",
+  border: "3px solid transparent",
+  borderRadius: 4,
+  background: 0,
+  outline: 0,
+  backgroundColor: "#fff",
+  "&:focus": {
+    border: focusBorder,
+  },
+}
 
 export const layout = mq({
   display: "grid",
@@ -25,7 +39,7 @@ export const layout = mq({
     margin: 0,
     padding: [25, 55],
     borderRadius: 4,
-    backgroundColor: "#211e1c",
+    backgroundColor: eerie,
     filter: "drop-shadow(0 5px 4px rgb(0, 0, 0, .6))",
     aside: {
       display: "grid",
@@ -50,30 +64,46 @@ export const layout = mq({
         label: {
           color: "darkgray",
         },
-        input: {
-          height: 45,
-          padding: "5px 15px",
-          border: "3px solid transparent",
+        "> input": input,
+        ".ReactPasswordStrength": {
+          ...input,
+          width: "100%",
+          padding: 0,
+          ".ReactPasswordStrength-input": {
+            height: "100%",
+            paddingTop: 0,
+            paddingBottom: 0,
+          },
+          ".ReactPasswordStrength-strength-bar": {
+            height: 3,
+          },
+          ".ReactPasswordStrength-strength-desc": {
+            padding: 0,
+            right: -20,
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+          },
+        },
+        button: {
+          padding: 4,
           borderRadius: 4,
-          background: 0,
+          border: "3px solid transparent",
           outline: 0,
-          backgroundColor: "#fff",
+          fontSize: "1rem",
+          color: lime,
+          background: 0,
           "&:focus": {
             border: focusBorder,
           },
         },
-        button: {
+        "button[type=submit]": {
           height: 45,
           marginTop: 24,
-          borderRadius: 4,
-          border: "3px solid transparent",
-          outline: 0,
+          fontSize: "1.2rem",
           fontWeight: 600,
+          color: eerie,
           backgroundColor: lime,
           transition: "250ms all ease-in-out",
-          "&:focus": {
-            border: focusBorder,
-          },
           "&:hover": {
             backgroundColor: color(lime).desaturate(0.4).darken(0.1).string(),
             cursor: "pointer",
@@ -84,11 +114,13 @@ export const layout = mq({
         color: "#db5461",
       },
       p: {
+        display: "inline-block",
+        marginRight: 5,
         color: "darkgray",
       },
       a: {
         fontWeight: 600,
-        textDecoration: 0,
+        // textDecoration: 0,
         color: lime,
         "&:focus": {
           border: "4px solid red",
