@@ -4,22 +4,24 @@ import { jsx } from "@emotion/core"
 import { motion } from "framer-motion"
 import { Link, useHistory } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { useLoginUserMutation } from "../../types/apollo-hooks"
+import { useRegisterUserMutation } from "../../types/apollo-hooks"
+
 import * as UserContext from "../../context/user-context"
 import * as variants from "../../constants/variants"
 import * as styles from "../styles"
 
-export const LoginPage: React.FC = () => {
+export const RegisterPage: React.FC = () => {
   /* initialize context */
   const [, userDispatch] = UserContext.useUser()
 
   /* define local state */
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const [email, setEmail] = React.useState("")
   const [error, setError] = React.useState("")
 
   /* initialize graphql mutation */
-  const [loginUserMutation] = useLoginUserMutation()
+  const [registerUserMutation] = useRegisterUserMutation()
 
   /* initialize route history */
   const history = useHistory()
@@ -28,14 +30,14 @@ export const LoginPage: React.FC = () => {
     /* disable page reload on submit */
     e.preventDefault()
 
-    if (!username && !password) {
+    if (!username && !password && !email) {
       return setError("Fields must not be empty.")
     }
 
     try {
       /* make graphql api call */
-      const { data } = await loginUserMutation({
-        variables: { input: { username, password } },
+      const { data } = await registerUserMutation({
+        variables: { input: { email, username, password } },
       })
 
       if (data) {
@@ -103,6 +105,16 @@ export const LoginPage: React.FC = () => {
             />
           </section>
           <section>
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="text"
+              value={email}
+              autoComplete="off"
+              onChange={(e) => setEmail(e.currentTarget.value)}
+            />
+          </section>
+          <section>
             <label htmlFor="password">Password</label>
             <input
               id="password"
@@ -115,8 +127,8 @@ export const LoginPage: React.FC = () => {
             <button type="submit">Login</button>
             {error && <span className="error">{error}</span>}
             <p>
-              <span>Need an account? </span>
-              <Link to="register">Register</Link>
+              <span>Already have an account? </span>
+              <Link to="login">Login</Link>
             </p>
           </section>
         </form>

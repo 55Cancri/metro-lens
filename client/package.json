@@ -44,6 +44,7 @@
     "aws-appsync-auth-link": "^2.0.2",
     "aws-appsync-subscription-link": "^2.2.0",
     "axios": "^0.19.2",
+    "color": "^3.1.2",
     "date-fns": "^2.15.0",
     "facepaint": "^1.2.1",
     "framer-motion": "^2.1.0",
@@ -61,6 +62,7 @@
     "webfontloader": "^1.6.28"
   },
   "devDependencies": {
+    "@types/color": "^3.0.1",
     "@types/facepaint": "^1.2.1",
     "@types/jest": "^26.0.5",
     "@types/jwt-decode": "^2.2.1",
