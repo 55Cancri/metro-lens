@@ -89,7 +89,8 @@ export const layout = mq({
           borderRadius: 4,
           border: "3px solid transparent",
           outline: 0,
-          fontSize: "1rem",
+          fontSize: ".8rem",
+          fontWeight: 600,
           color: lime,
           background: 0,
           "&:focus": {
@@ -100,7 +101,6 @@ export const layout = mq({
           height: 45,
           marginTop: 24,
           fontSize: "1.2rem",
-          fontWeight: 600,
           color: eerie,
           backgroundColor: lime,
           transition: "250ms all ease-in-out",
@@ -115,16 +115,11 @@ export const layout = mq({
       },
       p: {
         display: "inline-block",
-        marginRight: 5,
+        // marginRight: 2,
         color: "darkgray",
       },
       a: {
-        fontWeight: 600,
-        // textDecoration: 0,
         color: lime,
-        "&:focus": {
-          border: "4px solid red",
-        },
         "&:visited, &:hover": {
           color: lime,
           textDecoration: "underline",

@@ -138,14 +138,14 @@ export const RegisterPage: React.FC = () => {
             /> */}
           </section>
           <section>
-            <button type="submit">Login</button>
+            <button type="submit">Register</button>
             {error && <span className="error">{error}</span>}
-            <p>
-              <span>Already have an account? </span>
+            <div>
+              <p>Already have an account?</p>
               <Link to="login">
                 <button>Login</button>
               </Link>
-            </p>
+            </div>
           </section>
         </form>
       </main>
