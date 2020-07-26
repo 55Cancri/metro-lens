@@ -1,8 +1,12 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { Link, useHistory } from 'react-router-dom'
-import { useLoginUserMutation } from '../types/apollo-hooks'
-import * as UserContext from '../context/user-context'
+/** @jsx jsx */
+import React from "react"
+import { jsx } from "@emotion/core"
+import { motion } from "framer-motion"
+import { Link, useHistory } from "react-router-dom"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { useLoginUserMutation } from "../../types/apollo-hooks"
+import * as UserContext from "../../context/user-context"
+import * as styles from "./styles"
 
 const pageVariants = {
   initial: { scale: 0.9, opacity: 0 },
@@ -19,9 +23,9 @@ export const LoginPage: React.FC = () => {
   const [, userDispatch] = UserContext.useUser()
 
   /* define local state */
-  const [username, setUsername] = React.useState('')
-  const [password, setPassword] = React.useState('')
-  const [error, setError] = React.useState('')
+  const [username, setUsername] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [error, setError] = React.useState("")
 
   /* initialize graphql mutation */
   const [loginUserMutation] = useLoginUserMutation()
@@ -33,6 +37,10 @@ export const LoginPage: React.FC = () => {
     /* disable page reload on submit */
     e.preventDefault()
 
+    if (!username && !password) {
+      return setError("Fields must not be empty.")
+    }
+
     try {
       /* make graphql api call */
       const { data } = await loginUserMutation({
@@ -41,77 +49,87 @@ export const LoginPage: React.FC = () => {
 
       if (data) {
         /* clear error message */
-        setError('')
+        setError("")
 
         /* extract the credentials from the response */
         const { results: credentials } = data
 
         /* update the global store */
-        userDispatch({ type: 'login', credentials })
+        userDispatch({ type: "login", credentials })
 
         /* store the jwt in local storage */
-        localStorage.setItem('jwt', credentials.accessToken)
+        localStorage.setItem("jwt", credentials.accessToken)
 
         /* redirect to dashboard page */
-        history.push('/dashboard')
+        history.push("/dashboard")
       }
     } catch (errors) {
-      if ('graphQLErrors' in errors) {
+      if ("graphQLErrors" in errors) {
         const { graphQLErrors, message } = errors
         if (graphQLErrors.length > 0) {
           const [graphqlError] = graphQLErrors
           const { message } = graphqlError
           /* reset input fields on error */
-          setUsername('')
-          setPassword('')
+          setUsername("")
+          setPassword("")
           return setError(message)
         }
         /* reset input fields on error */
-        setUsername('')
-        setPassword('')
+        setUsername("")
+        setPassword("")
         return setError(message)
       }
 
-      const defaultMessage = 'An unknown error occurred'
+      const defaultMessage = "An unknown error occurred"
       return setError(defaultMessage)
     }
   }
 
   return (
     <motion.div
+      css={styles.layout}
       variants={pageVariants}
       initial="exit"
       animate="enter"
       exit="exit"
     >
-      <h1>Login page</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="username">
-            Username
+      <main>
+        <aside>
+          <span>
+            <FontAwesomeIcon icon="map-marked" color="white" size="2x" />
+          </span>
+          <h1>Coordinate</h1>
+        </aside>
+        <form onSubmit={handleSubmit}>
+          <section>
+            <label htmlFor="username">Username</label>
             <input
               id="username"
               type="text"
               value={username}
+              autoComplete="off"
               onChange={(e) => setUsername(e.currentTarget.value)}
             />
-          </label>
-        </div>
-        <div>
-          <label htmlFor="password">
-            Password
+          </section>
+          <section>
+            <label htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
             />
-          </label>
-        </div>
-        {error && <p>{error}</p>}
-        <button type="submit">Login</button>
-      </form>
-      <Link to="register">Register</Link>
+          </section>
+          <section>
+            <button type="submit">Login</button>
+            {error && <span className="error">{error}</span>}
+            <p>
+              <span>Need an account? </span>
+              <Link to="register">Register</Link>
+            </p>
+          </section>
+        </form>
+      </main>
     </motion.div>
   )
 }

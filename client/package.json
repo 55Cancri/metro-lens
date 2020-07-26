@@ -45,6 +45,7 @@
     "aws-appsync-subscription-link": "^2.2.0",
     "axios": "^0.19.2",
     "date-fns": "^2.15.0",
+    "facepaint": "^1.2.1",
     "framer-motion": "^2.1.0",
     "graphql": "15.3.0",
     "graphql-tag": "^2.10.4",
@@ -56,9 +57,11 @@
     "react-dom": "^16.13.1",
     "react-leaflet": "^2.7.0",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.1"
+    "react-scripts": "3.4.1",
+    "webfontloader": "^1.6.28"
   },
   "devDependencies": {
+    "@types/facepaint": "^1.2.1",
     "@types/jest": "^26.0.5",
     "@types/jwt-decode": "^2.2.1",
     "@types/latlon-geohash": "^2.0.0",
@@ -67,6 +70,7 @@
     "@types/react-dom": "^16.9.8",
     "@types/react-leaflet": "^2.5.2",
     "@types/react-router-dom": "^5.1.3",
+    "@types/webfontloader": "^1.6.32",
     "@typescript-eslint/eslint-plugin": "^3.6.1",
     "@typescript-eslint/parser": "^3.6.1",
     "cz-conventional-changelog": "^3.2.0",

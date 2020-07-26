@@ -1,5 +1,5 @@
 export { SplashPage } from "./splash-page"
 export { DashboardPage } from "./dashboard"
 export { RegisterPage } from "./register-page"
-export { LoginPage } from "./login-page"
+export { LoginPage } from "./login"
 export { NotFoundPage } from "./not-found"

@@ -153,8 +153,9 @@ export const DashboardPage: React.FC = () => {
   const isLoading = loadingLocation || loadingInitialVehicles
   if (isLoading) return <motion.p>Loading...</motion.p>
 
-  const target = vehicles.get("402_9700")
-  console.log({ lat: target?.lat, lon: target?.lon })
+  // const target = vehicles.get("402_9700")
+  // console.log({ lat: target?.lat, lon: target?.lon })
+  console.log(new Date().toLocaleTimeString())
   console.log({ vehicles })
 
   /* dark mode */
@@ -186,6 +187,19 @@ export const DashboardPage: React.FC = () => {
       <main>
         <Header />
         <Refocus onClick={onRefocus} />
+        <p
+          css={{
+            position: "absolute",
+            zIndex: 100,
+            bottom: 8,
+            left: 35,
+            color: "darkgrey",
+            fontSize: "1.4rem",
+            fontWeight: 700,
+          }}
+        >
+          {vehicles.size} active buses
+        </p>
         <L.Map
           css={styles.map}
           center={mapCenter}
