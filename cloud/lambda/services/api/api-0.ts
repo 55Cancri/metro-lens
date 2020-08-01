@@ -77,6 +77,7 @@ export const apiServiceProvider = ({
               mph
               vehicleId
               destination
+              routeDirection
               lastLocation {
                 lat
                 lon

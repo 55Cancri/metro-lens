@@ -51,12 +51,21 @@ export type Prediction = {
   stopName: string
 }
 
+export type PredictionWithDirection = {
+  arrivalIn: string
+  arrivalTime: string
+  stopId: string
+  stopName: string
+  routeDirection: string
+}
+
 export type Coordinate = Record<"lat" | "lon", string>
 
 export type Vehicle = {
   rt: string
   vehicleId: string
   destination: string
+  routeDirection: string
   mph: string
   lastLocation: Partial<Coordinate>
   currentLocation: Coordinate

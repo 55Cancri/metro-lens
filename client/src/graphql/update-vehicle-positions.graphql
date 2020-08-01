@@ -2,6 +2,7 @@ subscription onUpdateVehiclePositions {
   onUpdateVehiclePositions {
     rt
     vehicleId
+    routeDirection
     destination
     mph
     lastLocation {

@@ -57,6 +57,7 @@ type Vehicle {
   rt: String!
   vehicleId: String!
   destination: String!
+  routeDirection: String!
   mph: String!
   lastLocation: Coordinate!
   currentLocation: Coordinate!

@@ -13,7 +13,7 @@ const ACTIVE_PREDICTION_SET_SIZE = process.env.ACTIVE_PREDICTION_SET_SIZE
   ? Number(process.env.ACTIVE_PREDICTION_SET_SIZE)
   : 25
 
-type PredictionMap = Record<string, Dynamo.Prediction[]>
+type PredictionMap = Record<string, Dynamo.PredictionWithDirection[]>
 
 /**
  *
@@ -299,7 +299,7 @@ export const createPredictionMap = (
     }
 
     /* otherwise extract the relevant values from the prediction */
-    const { rt, vid, stpid, stpnm, prdtm, prdctdn } = prediction
+    const { rt, vid, stpid, stpnm, prdtm, prdctdn, rtdir } = prediction
 
     /* create key */
     const routeIdVehicleId = `${rt}_${vid}`
@@ -311,7 +311,13 @@ export const createPredictionMap = (
     const arrivalTime = date.parsePredictedTime(prdtm)
 
     /* and create an eta */
-    const eta = { arrivalIn, arrivalTime, stopName: stpnm, stopId: stpid }
+    const eta = {
+      arrivalIn,
+      arrivalTime,
+      stopName: stpnm,
+      stopId: stpid,
+      routeDirection: rtdir,
+    }
 
     /* if the store has encountered this route id / vehicle id object before, */
     if (store[routeIdVehicleId]) {
@@ -322,6 +328,20 @@ export const createPredictionMap = (
     /* otherwise create a new eta for the route id / vehicle id object */
     return { ...store, [routeIdVehicleId]: [eta] }
   }, {} as PredictionMap)
+
+/**
+ * Get the route direction and remove from each prediction item.
+ * @param vehiclePredictions
+ */
+const getDirectionAndPredictions = (
+  vehiclePredictions: Dynamo.PredictionWithDirection[]
+) => {
+  const { routeDirection } = vehiclePredictions[0] ?? {}
+  const predictions = vehiclePredictions.map(
+    ({ routeDirection, ...vehiclePrediction }) => vehiclePrediction
+  )
+  return { routeDirection, predictions }
+}
 
 /**
  * Create a new prediction item.
@@ -359,8 +379,12 @@ export const createVehicleStruct = (
         new Date(vehicle.lastUpdateTime)
       )
       const absoluteDifferenceInHours = Math.abs(differenceInHours)
+      const recentlyUpdated = absoluteDifferenceInHours < 12
+      const hasPredictions =
+        vehicle.predictions && vehicle.predictions.length > 0
+      const hasRouteDirection = vehicle.routeDirection
 
-      return absoluteDifferenceInHours < 12
+      return recentlyUpdated && hasPredictions && hasRouteDirection
         ? { ...store, [routeIdVehicleId]: vehicle }
         : store
     },
@@ -382,7 +406,12 @@ export const createVehicleStruct = (
 
     // get the array of predictions for the route-vehicle id
     const mph = String(spd)
-    const predictions = predictionMap[routeIdVehicleId] as Dynamo.Prediction[]
+    const vehiclePredictions = predictionMap[
+      routeIdVehicleId
+    ] as Dynamo.PredictionWithDirection[]
+    const { routeDirection, predictions } = getDirectionAndPredictions(
+      vehiclePredictions ?? []
+    )
     const lastLocation = {}
     const currentLocation = { lat, lon }
     const lastUpdateTime = date.getNowInISO()
@@ -391,6 +420,7 @@ export const createVehicleStruct = (
     const updatedLocationAndPrediction = {
       rt,
       vehicleId,
+      routeDirection,
       mph,
       destination,
       lastLocation,
@@ -399,7 +429,10 @@ export const createVehicleStruct = (
       predictions,
       sourceTimestamp,
     }
-    return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
+    if (predictions.length > 0) {
+      return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
+    }
+    return store
   }, filteredPastRoutes)
 }
 
@@ -426,7 +459,10 @@ const getPredictionList = (
     } = vehicle
     // treat all `routeIdVehicleIds` as a single unique vehicle
     const routeIdVehicleId = `${rt}_${vehicleId}`
-    const predictions = predictionMap[routeIdVehicleId]
+    const vehiclePredictions = predictionMap[routeIdVehicleId]
+    const { routeDirection, predictions } = getDirectionAndPredictions(
+      vehiclePredictions ?? []
+    )
     const lastUpdateTime = date.getNowInISO()
     const mph = String(spd)
     const lastLocation = {}
@@ -435,8 +471,7 @@ const getPredictionList = (
     const locationAndPrediction: Dynamo.Vehicle = {
       rt,
       vehicleId,
-      // lat,
-      // lon,
+      routeDirection,
       mph,
       destination,
       lastLocation,

@@ -76,6 +76,7 @@ export type Vehicle = {
   rt: Scalars["String"]
   vehicleId: Scalars["String"]
   destination: Scalars["String"]
+  routeDirection: Scalars["String"]
   mph: Scalars["String"]
   lastLocation: Coordinate
   currentLocation: Coordinate
@@ -173,6 +174,7 @@ export type GetVehiclePositionsQuery = { __typename?: "Query" } & {
         Vehicle,
         | "rt"
         | "vehicleId"
+        | "routeDirection"
         | "destination"
         | "mph"
         | "sourceTimestamp"
@@ -240,6 +242,7 @@ export type OnUpdateVehiclePositionsSubscription = {
         Vehicle,
         | "rt"
         | "vehicleId"
+        | "routeDirection"
         | "destination"
         | "mph"
         | "sourceTimestamp"
@@ -327,6 +330,7 @@ export const GetVehiclePositionsDocument = gql`
     getVehiclePositions {
       rt
       vehicleId
+      routeDirection
       destination
       mph
       lastLocation {
@@ -544,6 +548,7 @@ export const OnUpdateVehiclePositionsDocument = gql`
     onUpdateVehiclePositions {
       rt
       vehicleId
+      routeDirection
       destination
       mph
       lastLocation {

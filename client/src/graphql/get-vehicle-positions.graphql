@@ -2,6 +2,7 @@ query getVehiclePositions {
   getVehiclePositions {
     rt
     vehicleId
+    routeDirection
     destination
     mph
     lastLocation {
