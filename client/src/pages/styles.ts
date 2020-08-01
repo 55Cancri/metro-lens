@@ -1,9 +1,9 @@
-import { mq } from "../constants/media-queries"
 import color from "color"
-// import * as colors from "../../constants/colors"
+import { mq } from "../constants/media-queries"
+import * as colors from "../constants/colors"
 
 // const lime = "#77ff94"
-const eerie = "#211e1c"
+
 const lime = "#7cf897"
 const focusBorder = `3px solid ${color(lime)
   .desaturate(0.5)
@@ -39,7 +39,7 @@ export const layout = mq({
     margin: 0,
     padding: [25, 55],
     borderRadius: 4,
-    backgroundColor: eerie,
+    backgroundColor: colors.grey95,
     filter: "drop-shadow(0 5px 4px rgb(0, 0, 0, .6))",
     aside: {
       display: "grid",
@@ -96,12 +96,15 @@ export const layout = mq({
           "&:focus": {
             border: focusBorder,
           },
+          "&:hover": {
+            cursor: "pointer",
+          },
         },
         "button[type=submit]": {
           height: 45,
           marginTop: 24,
           fontSize: "1.2rem",
-          color: eerie,
+          color: colors.grey95,
           backgroundColor: lime,
           transition: "250ms all ease-in-out",
           "&:hover": {

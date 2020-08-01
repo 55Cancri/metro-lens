@@ -280,7 +280,10 @@ export const apiServiceProvider = ({
         params,
       })
       .then(({ data }) => {
-        const { stops } = data["bustime-response"] as Api.ConnectorApiStop
+        const response = data["bustime-response"] as Api.ConnectorApiStop
+        console.log("Response from getting vehicle stops.")
+        console.log(response)
+        const { stops } = response
         const { rt } = params
         return stops.map(({ stpid, stpnm, lat, lon }) => ({
           routeId: rt_dir ? rt_dir : rt!,

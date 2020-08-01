@@ -26,6 +26,11 @@ export type VehicleInput = {
   predictionGroupId: Scalars["String"]
 }
 
+export type MapInput = {
+  route: Scalars["String"]
+  direction: Scalars["String"]
+}
+
 export type FavoriteStop = {
   __typename?: "FavoriteStop"
   stopId: Scalars["String"]
@@ -33,10 +38,10 @@ export type FavoriteStop = {
   userLabel: Scalars["String"]
 }
 
-export type Location = {
-  __typename?: "Location"
-  lat: Scalars["Int"]
-  lon: Scalars["Int"]
+export type Coordinate = {
+  __typename?: "Coordinate"
+  lat?: Maybe<Scalars["String"]>
+  lon?: Maybe<Scalars["String"]>
 }
 
 export type User = {
@@ -49,7 +54,7 @@ export type User = {
   dateCreated: Scalars["String"]
   lastSignOn: Scalars["String"]
   favoriteStops: Array<Maybe<FavoriteStop>>
-  locations: Array<Maybe<Location>>
+  locations: Array<Maybe<Coordinate>>
 }
 
 export type LoginResponse = {
@@ -68,12 +73,26 @@ export type Prediction = {
 
 export type Vehicle = {
   __typename?: "Vehicle"
-  vehicleId: Scalars["String"]
   rt: Scalars["String"]
+  vehicleId: Scalars["String"]
+  destination: Scalars["String"]
+  mph: Scalars["String"]
+  lastLocation: Coordinate
+  currentLocation: Coordinate
+  lastUpdateTime: Scalars["String"]
+  sourceTimestamp: Scalars["String"]
+  predictions: Array<Prediction>
+}
+
+export type Map = {
+  __typename?: "Map"
   lat: Scalars["String"]
   lon: Scalars["String"]
-  lastUpdateTime: Scalars["String"]
-  predictions: Array<Prediction>
+  routeDirection: Scalars["String"]
+  sequence: Scalars["String"]
+  type: Scalars["String"]
+  stopId?: Maybe<Scalars["String"]>
+  stopName?: Maybe<Scalars["String"]>
 }
 
 export type Test = {
@@ -87,10 +106,15 @@ export type Query = {
   getUser?: Maybe<User>
   getUsers?: Maybe<Array<Maybe<User>>>
   getVehiclePositions?: Maybe<Array<Vehicle>>
+  getMap: Array<Maybe<Map>>
 }
 
 export type QueryGetUserArgs = {
   id: Scalars["ID"]
+}
+
+export type QueryGetMapArgs = {
+  input: MapInput
 }
 
 export type Mutation = {
@@ -119,6 +143,27 @@ export type Subscription = {
   testedMutation?: Maybe<Test>
 }
 
+export type GetMapQueryVariables = {
+  input: MapInput
+}
+
+export type GetMapQuery = { __typename?: "Query" } & {
+  results: Array<
+    Maybe<
+      { __typename?: "Map" } & Pick<
+        Map,
+        | "lat"
+        | "lon"
+        | "routeDirection"
+        | "sequence"
+        | "type"
+        | "stopId"
+        | "stopName"
+      >
+    >
+  >
+}
+
 export type GetVehiclePositionsQueryVariables = {}
 
 export type GetVehiclePositionsQuery = { __typename?: "Query" } & {
@@ -126,8 +171,21 @@ export type GetVehiclePositionsQuery = { __typename?: "Query" } & {
     Array<
       { __typename?: "Vehicle" } & Pick<
         Vehicle,
-        "vehicleId" | "rt" | "lat" | "lon" | "lastUpdateTime"
+        | "rt"
+        | "vehicleId"
+        | "destination"
+        | "mph"
+        | "sourceTimestamp"
+        | "lastUpdateTime"
       > & {
+          lastLocation: { __typename?: "Coordinate" } & Pick<
+            Coordinate,
+            "lat" | "lon"
+          >
+          currentLocation: { __typename?: "Coordinate" } & Pick<
+            Coordinate,
+            "lat" | "lon"
+          >
           predictions: Array<
             { __typename?: "Prediction" } & Pick<
               Prediction,
@@ -180,8 +238,21 @@ export type OnUpdateVehiclePositionsSubscription = {
     Array<
       { __typename?: "Vehicle" } & Pick<
         Vehicle,
-        "vehicleId" | "rt" | "lat" | "lon" | "lastUpdateTime"
+        | "rt"
+        | "vehicleId"
+        | "destination"
+        | "mph"
+        | "sourceTimestamp"
+        | "lastUpdateTime"
       > & {
+          lastLocation: { __typename?: "Coordinate" } & Pick<
+            Coordinate,
+            "lat" | "lon"
+          >
+          currentLocation: { __typename?: "Coordinate" } & Pick<
+            Coordinate,
+            "lat" | "lon"
+          >
           predictions: Array<
             { __typename?: "Prediction" } & Pick<
               Prediction,
@@ -193,20 +264,87 @@ export type OnUpdateVehiclePositionsSubscription = {
   >
 }
 
+export const GetMapDocument = gql`
+  query getMap($input: MapInput!) {
+    results: getMap(input: $input) {
+      lat
+      lon
+      routeDirection
+      sequence
+      type
+      stopId
+      stopName
+    }
+  }
+`
+
+/**
+ * __useGetMapQuery__
+ *
+ * To run a query within a React component, call `useGetMapQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMapQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMapQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useGetMapQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetMapQuery,
+    GetMapQueryVariables
+  >
+) {
+  return ApolloReactHooks.useQuery<GetMapQuery, GetMapQueryVariables>(
+    GetMapDocument,
+    baseOptions
+  )
+}
+export function useGetMapLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetMapQuery,
+    GetMapQueryVariables
+  >
+) {
+  return ApolloReactHooks.useLazyQuery<GetMapQuery, GetMapQueryVariables>(
+    GetMapDocument,
+    baseOptions
+  )
+}
+export type GetMapQueryHookResult = ReturnType<typeof useGetMapQuery>
+export type GetMapLazyQueryHookResult = ReturnType<typeof useGetMapLazyQuery>
+export type GetMapQueryResult = ApolloReactCommon.QueryResult<
+  GetMapQuery,
+  GetMapQueryVariables
+>
 export const GetVehiclePositionsDocument = gql`
   query getVehiclePositions {
     getVehiclePositions {
-      vehicleId
       rt
-      lat
-      lon
-      lastUpdateTime
+      vehicleId
+      destination
+      mph
+      lastLocation {
+        lat
+        lon
+      }
+      currentLocation {
+        lat
+        lon
+      }
       predictions {
         arrivalIn
         arrivalTime
         stopId
         stopName
       }
+      sourceTimestamp
+      lastUpdateTime
     }
   }
 `
@@ -404,17 +542,26 @@ export type TestedMutationSubscriptionResult = ApolloReactCommon.SubscriptionRes
 export const OnUpdateVehiclePositionsDocument = gql`
   subscription onUpdateVehiclePositions {
     onUpdateVehiclePositions {
-      vehicleId
       rt
-      lat
-      lon
-      lastUpdateTime
+      vehicleId
+      destination
+      mph
+      lastLocation {
+        lat
+        lon
+      }
+      currentLocation {
+        lat
+        lon
+      }
       predictions {
         arrivalIn
         arrivalTime
         stopId
         stopName
       }
+      sourceTimestamp
+      lastUpdateTime
     }
   }
 `

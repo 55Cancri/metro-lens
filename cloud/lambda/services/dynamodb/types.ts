@@ -51,14 +51,27 @@ export type Prediction = {
   stopName: string
 }
 
+export type Coordinate = Record<"lat" | "lon", string>
+
 export type Vehicle = {
-  lastUpdateTime: string
-  lat: string
-  lon: string
   rt: string
   vehicleId: string
+  destination: string
+  mph: string
+  lastLocation: Partial<Coordinate>
+  currentLocation: Coordinate
   predictions?: Prediction[]
+  sourceTimestamp: string
+  lastUpdateTime: string
 }
+// export type Vehicle = {
+//   lastUpdateTime: string
+//   lat: string
+//   lon: string
+//   rt: string
+//   vehicleId: string
+//   predictions?: Prediction[]
+// }
 
 export type Routes = { [routeIdVehicleId: string]: Vehicle }
 
@@ -84,6 +97,21 @@ export type VehicleStopGroup = {
   [routeId: string]: {
     [stopId: string]: VehicleStop
   }
+}
+
+export type MapItem = PrimaryKey & {
+  dateCreated: string
+  map: {
+    [key: string]: {
+      stopId?: string
+      stopName?: string
+      sequence: number
+      type: "stop" | "waypoint"
+      routeDirection: string
+      lat: string
+      lon: string
+    }
+  }[]
 }
 
 // === evaluate the below ===
@@ -139,20 +167,6 @@ export type BusesByRouteId = PrimaryKey & {
       predictions: Prediction[]
     }
   }
-}
-
-export type MapItem = PrimaryKey & {
-  map: {
-    [key: string]: {
-      stopId?: string
-      stopName?: string
-      sequence: number
-      type: "stop" | "waypoint"
-      routeDirection: string
-      lat: string
-      lon: string
-    }
-  }[]
 }
 
 export type VehicleStopItem = PrimaryKey & {

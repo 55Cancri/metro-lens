@@ -1,15 +1,24 @@
 subscription onUpdateVehiclePositions {
   onUpdateVehiclePositions {
-    vehicleId
     rt
-    lat
-    lon
-    lastUpdateTime
+    vehicleId
+    destination
+    mph
+    lastLocation {
+      lat
+      lon
+    }
+    currentLocation {
+      lat
+      lon
+    }
     predictions {
       arrivalIn
       arrivalTime
       stopId
       stopName
     }
+    sourceTimestamp
+    lastUpdateTime
   }
 }

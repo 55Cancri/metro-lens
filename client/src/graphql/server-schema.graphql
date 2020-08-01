@@ -13,15 +13,20 @@ input VehicleInput {
   predictionGroupId: String!
 }
 
+input MapInput {
+  route: String!
+  direction: String!
+}
+
 type FavoriteStop {
   stopId: String!
   stopName: String!
   userLabel: String!
 }
 
-type Location {
-  lat: Int!
-  lon: Int!
+type Coordinate {
+  lat: String
+  lon: String
 }
 
 type User {
@@ -33,7 +38,7 @@ type User {
   dateCreated: String!
   lastSignOn: String!
   favoriteStops: [FavoriteStop]!
-  locations: [Location]!
+  locations: [Coordinate]!
 }
 
 type LoginResponse {
@@ -49,12 +54,25 @@ type Prediction {
 }
 
 type Vehicle {
-  vehicleId: String!
   rt: String!
+  vehicleId: String!
+  destination: String!
+  mph: String!
+  lastLocation: Coordinate!
+  currentLocation: Coordinate!
+  lastUpdateTime: String!
+  sourceTimestamp: String!
+  predictions: [Prediction!]!
+}
+
+type Map {
   lat: String!
   lon: String!
-  lastUpdateTime: String!
-  predictions: [Prediction!]!
+  routeDirection: String!
+  sequence: String!
+  type: String!
+  stopId: String
+  stopName: String
 }
 
 type Test {
@@ -66,6 +84,7 @@ type Query {
   getUser(id: ID!): User
   getUsers: [User]
   getVehiclePositions: [Vehicle!]
+  getMap(input: MapInput!): [Map]!
 }
 
 type Mutation {

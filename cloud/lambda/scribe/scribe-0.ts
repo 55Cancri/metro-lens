@@ -76,13 +76,6 @@ export const scribe = (deps: Deps) => async (
   const { active, dormant = {} } = scribeUtils.assembleStatusItem(
     updatedFlatStatus
   )
-
-  // print({ statusOfVehicles, routeApiCount })
-  // print({ newActive: active, routeApiCount })
-  console.log("Made a ton of api calls above.")
-  // print({ newActive: active, newDormant: dormant })
-  // print({ newActive: active, newDormant: dormant })
-
   /* create the vehicle status item */
   const vehicleStatusItem = dynamodb.createItem({
     pk: "vehicle",
@@ -90,7 +83,12 @@ export const scribe = (deps: Deps) => async (
     active,
     dormant,
   })
-  const saveVehicleStatus = dynamodb.writeItem(vehicleStatusItem)
+  const saveVehicleStatus = dynamodb
+    .writeItem(vehicleStatusItem)
+    .catch((error) => {
+      console.log("Error: failed to save pk:vehicle sk:status item.")
+      throw new Error(error)
+    })
 
   /* --------------- update predictions of active vehicles only --------------- */
 
@@ -110,12 +108,8 @@ export const scribe = (deps: Deps) => async (
   const predictionItems = await scribeUtils.getPredictionItems(vehicles, {
     dynamodb,
     predictionMap,
+    date,
   })
-
-  print({ finalPredictionItemsLength: predictionItems.length })
-
-  /*create a timestamp for the current moment */
-  const lastUpdateTime = date.getNowInISO()
 
   await predictionItems.reduce(async (store, pastItem) => {
     const flattenedPredictions = await store
@@ -123,7 +117,7 @@ export const scribe = (deps: Deps) => async (
     const routes = scribeUtils.createVehicleStruct(flattenedPredictions, {
       currentVehicles: vehicles,
       pastVehicles: pastItem,
-      lastUpdateTime,
+      date,
     })
 
     const vehicleItem = dynamodb.createItem({
@@ -142,7 +136,16 @@ export const scribe = (deps: Deps) => async (
       TTL: date.setTTLExpirationIn({ days: 1 }),
     })
 
-    const saveVehicle = dynamodb.writeItem(vehicleItem)
+    const saveVehicle = dynamodb.writeItem(vehicleItem).catch((error) => {
+      console.log(
+        `Error: failed to save pk:active-prediction sk:${predictionItemId} item with item:`
+      )
+      const keys = Object.keys(routes)
+      console.log("keys:", keys, "length:", keys.length)
+      console.log("set length:", new Set(keys).size)
+      console.log(vehicleItem)
+      throw new Error(error)
+    })
     const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
 
     /* ---------------------- trigger the graphql mutation ---------------------- */

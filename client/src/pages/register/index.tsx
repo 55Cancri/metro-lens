@@ -130,12 +130,6 @@ export const RegisterPage: React.FC = () => {
                 className: "form-control",
               }}
             />
-            {/* <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.currentTarget.value)}
-            /> */}
           </section>
           <section>
             <button type="submit">Register</button>

@@ -22,11 +22,15 @@ export const vehicles = (deps: Deps) => async (
   const predictions = await dynamodb.getActivePredictions(predictionGroupId)
 
   if (!predictionGroupId) {
-    return predictions.reduce<Dynamo.Vehicle[]>((store, prediction) => {
-      const vehicles = Object.values(prediction.routes)
-      const recentVehicles = getRecentVehicles(vehicles, { date })
-      return [...store, ...recentVehicles]
-    }, [])
+    const allVehicles = predictions.reduce<Dynamo.Vehicle[]>(
+      (store, prediction) => {
+        const vehicles = Object.values(prediction.routes)
+        const recentVehicles = getRecentVehicles(vehicles, { date })
+        return [...store, ...recentVehicles]
+      },
+      []
+    )
+    return allVehicles
   }
 
   // console.log("PREDICTION LENGTH: ", predictions.length)
@@ -36,5 +40,7 @@ export const vehicles = (deps: Deps) => async (
   const vehicles = Object.values(prediction.routes)
 
   /* filter out buses that were last updated more than 5 minutes ago */
-  return getRecentVehicles(vehicles, { date })
+  const filteredVehicles = getRecentVehicles(vehicles, { date })
+
+  return filteredVehicles
 }

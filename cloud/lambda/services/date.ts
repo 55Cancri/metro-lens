@@ -1,4 +1,4 @@
-import * as df from 'date-fns'
+import * as df from "date-fns"
 
 export const dateServiceProvider = () => {
   /**
@@ -62,6 +62,11 @@ export const dateServiceProvider = () => {
       : getEpochTime({ date: withDays })
   }
 
+  /**
+   * Get the different in hours between two dates.
+   * @param date1
+   * @param date2
+   */
   const getDifferenceInHours = (date1: Date, date2: Date) =>
     df.differenceInHours(date1, date2)
 
@@ -76,7 +81,7 @@ export const dateServiceProvider = () => {
   }
 
   const parsePredictedTime = (predictedTime: string) =>
-    df.parse(predictedTime, 'yyyyMMdd HH:mm', new Date()).toISOString()
+    df.parse(predictedTime, "yyyyMMdd HH:mm", new Date()).toISOString()
 
   /**
    * Determine if x number of minutes have elapsed since a given ISO date string.
@@ -88,7 +93,7 @@ export const dateServiceProvider = () => {
     ISOStringDate: string | null,
     elapsedMinutes = 45
   ) =>
-    typeof ISOStringDate === 'string' &&
+    typeof ISOStringDate === "string" &&
     df.differenceInMinutes(new Date(), new Date(ISOStringDate)) > elapsedMinutes
 
   /**
@@ -101,8 +106,18 @@ export const dateServiceProvider = () => {
     ISOStringDate: string | null,
     elapsedMinutes = 45
   ) =>
-    typeof ISOStringDate === 'string' &&
+    typeof ISOStringDate === "string" &&
     df.differenceInMinutes(new Date(), new Date(ISOStringDate)) < elapsedMinutes
+
+  /**
+   * Convert the fairfax timetamp format into an ISO string.
+   * @example "20200726 10:54" -> "2020-07-26T10:14:00"
+   * @param tmstmp
+   */
+  const getSourceTimestamp = (tmstmp: string) => {
+    const timestamp = df.parse(tmstmp, "yyyyMMdd HH:mm", new Date())
+    return timestamp.toISOString()
+  }
 
   return {
     getNowInISO,
@@ -113,6 +128,7 @@ export const dateServiceProvider = () => {
     getEpochTimeIn5Minutes,
     getDifferenceInHours,
     setTTLExpirationIn,
+    getSourceTimestamp,
     getStartOfDay,
     getEndOfDay,
     parsePredictedTime,

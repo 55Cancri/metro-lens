@@ -173,7 +173,7 @@ export class MetroLensStack extends cdk.Stack {
       },
     })
 
-    /* appsync lambda to return bus predictions */
+    /* appsync lambda to return vehicle predictions */
     const lambdaVehicles = new nodejs.NodejsFunction(this, "buses", {
       functionName: "vehicles",
       runtime: lambda.Runtime.NODEJS_12_X,
@@ -183,6 +183,28 @@ export class MetroLensStack extends cdk.Stack {
       layers: [layer],
       logRetention: logs.RetentionDays.FIVE_DAYS,
       description: "Query vehicle predictions.",
+      environment: {
+        SORT_KEY: "id",
+        PARTITION_KEY: "entity",
+        // HIST_SORT_KEY: 'archiveTime',
+        // HIST_PARTITION_KEY: 'id',
+        // USERNAME_SORT_KEY: 'username',
+        TABLE_NAME: metrolensTable.tableName,
+        // HIST_TABLE_NAME: metrolensHistTable.tableName,
+        // JWT_SECRET: String(process.env.JWT_SECRET),
+      },
+    })
+
+    /* appsync lambda to return bus predictions */
+    const lambdaMaps = new nodejs.NodejsFunction(this, "maps", {
+      functionName: "maps",
+      runtime: lambda.Runtime.NODEJS_12_X,
+      timeout: cdk.Duration.seconds(30),
+      entry: "./lambda/maps/handler.ts",
+      handler: "handler",
+      layers: [layer],
+      logRetention: logs.RetentionDays.FIVE_DAYS,
+      description: "Query route maps.",
       environment: {
         SORT_KEY: "id",
         PARTITION_KEY: "entity",
@@ -279,6 +301,21 @@ export class MetroLensStack extends cdk.Stack {
     vehicleDataSource.createResolver({
       typeName: "Query",
       fieldName: "getVehiclePositions",
+      requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
+      responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
+    })
+
+    /* appsync: add lambda as a data source */
+    const mapDataSource = graphql.addLambdaDataSource(
+      "lambdaMaps",
+      "Query maps Lambda",
+      lambdaMaps
+    )
+
+    /* appsync: mutation response is handled by the lambda */
+    mapDataSource.createResolver({
+      typeName: "Query",
+      fieldName: "getMap",
       requestMappingTemplate: appsync.MappingTemplate.lambdaRequest(),
       responseMappingTemplate: appsync.MappingTemplate.lambdaResult(),
     })
@@ -402,6 +439,7 @@ export class MetroLensStack extends cdk.Stack {
     metrolensTable.grantReadWriteData(lambdaAuditor)
     metrolensTable.grantReadWriteData(lambdaScribe)
     metrolensTable.grantReadWriteData(lambdaVehicles)
+    metrolensTable.grantReadWriteData(lambdaMaps)
 
     /* grant the lambdas access to the dynamodb hist table */
     metrolensHistTable.grantWriteData(lambdaAuditor)

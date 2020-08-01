@@ -1,6 +1,11 @@
-
-
-# query getMap() {
-#   results: getMap() {
-#   }
-# }
+query getMap($input: MapInput!) {
+  results: getMap(input: $input) {
+    lat
+    lon
+    routeDirection
+    sequence
+    type
+    stopId
+    stopName
+  }
+}

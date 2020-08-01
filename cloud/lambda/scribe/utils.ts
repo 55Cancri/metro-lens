@@ -186,8 +186,13 @@ export const getApiResponse = async <T>(
 
       /* handle exclusive errors */
       if ("error" in vehicle) {
-        console.log("ERROR! ERROR!")
-        console.log(vehicle.error)
+        const [error] = vehicle.error
+        const { msg } = error
+        if (/^(?=.*transaction)(?=.*limit)(?=.*exceeded).*$/i.test(msg)) {
+          throw new Error(
+            "Error: Transaction limit for current day has been exceeded."
+          )
+        }
         return [...store, ...vehicle.error]
       }
 
@@ -213,8 +218,13 @@ export const getApiResponse = async <T>(
 
       /* handle exclusive errors */
       if ("error" in vehicle) {
-        console.log("ERROR! ERROR!")
-        console.log(vehicle.error)
+        const [error] = vehicle.error
+        const { msg } = error
+        if (/^(?=.*transaction)(?=.*limit)(?=.*exceeded).*$/i.test(msg)) {
+          throw new Error(
+            "Error: Transaction limit for current day has been exceeded."
+          )
+        }
         return [...store, ...vehicle.error]
       }
 
@@ -328,30 +338,70 @@ export const createVehicleStruct = (
     currentVehicles,
     /** the route vehicle id from dynamo */
     pastVehicles,
-    lastUpdateTime,
+    date,
   }: {
     currentVehicles: Api.ConnectorVehicleOrError[]
     pastVehicles: Dynamo.VehiclePredictionItem
-    lastUpdateTime: string
+    date: Deps["date"]
   }
-) =>
-  currentVehicles.reduce((store, vehicle) => {
-    if ("msg" in vehicle) return store
-    const { rt, vid: vehicleId, lat, lon } = vehicle
-    const routeIdVehicleId = `${rt}_${vehicleId}`
+) => {
+  /**
+   * Limit the size of the prediction objects based on expiration time.
+   */
+  const filteredPastRoutes = Object.entries(pastVehicles.routes).reduce(
+    (store, routeVehicle) => {
+      const [routeIdVehicleId, vehicle] = routeVehicle as [
+        string,
+        Dynamo.Vehicle
+      ]
+      const differenceInHours = date.getDifferenceInHours(
+        new Date(),
+        new Date(vehicle.lastUpdateTime)
+      )
+      const absoluteDifferenceInHours = Math.abs(differenceInHours)
 
-    /* get the array of predictions for the route-vehicle id */
-    const predictions = predictionMap[routeIdVehicleId] as Dynamo.Prediction[]
-    const updatedLocationAndPrediction = {
+      return absoluteDifferenceInHours < 12
+        ? { ...store, [routeIdVehicleId]: vehicle }
+        : store
+    },
+    {}
+  )
+
+  return currentVehicles.reduce((store, vehicle) => {
+    if ("msg" in vehicle) return store
+    const {
       rt,
+      vid: vehicleId,
       lat,
       lon,
+      spd,
+      des: destination,
+      tmstmp,
+    } = vehicle
+    const routeIdVehicleId = `${rt}_${vehicleId}`
+
+    // get the array of predictions for the route-vehicle id
+    const mph = String(spd)
+    const predictions = predictionMap[routeIdVehicleId] as Dynamo.Prediction[]
+    const lastLocation = {}
+    const currentLocation = { lat, lon }
+    const lastUpdateTime = date.getNowInISO()
+    const sourceTimestamp = date.getSourceTimestamp(tmstmp)
+
+    const updatedLocationAndPrediction = {
+      rt,
       vehicleId,
-      predictions,
+      mph,
+      destination,
+      lastLocation,
+      currentLocation,
       lastUpdateTime,
+      predictions,
+      sourceTimestamp,
     }
     return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
-  }, pastVehicles.routes)
+  }, filteredPastRoutes)
+}
 
 /**
  * Map all active vehicles obtained from the api call into
@@ -361,22 +411,39 @@ export const createVehicleStruct = (
  */
 const getPredictionList = (
   vehicles: Api.ConnectorVehicleOrError[],
-  { predictionMap }: { predictionMap: PredictionMap }
+  { predictionMap, date }: { predictionMap: PredictionMap; date: Deps["date"] }
 ) =>
   vehicles.reduce((store, vehicle) => {
     if ("msg" in vehicle) return store
-    const { rt, vid: vehicleId, lat, lon } = vehicle
+    const {
+      rt,
+      vid: vehicleId,
+      lat,
+      lon,
+      spd,
+      des: destination,
+      tmstmp,
+    } = vehicle
     // treat all `routeIdVehicleIds` as a single unique vehicle
     const routeIdVehicleId = `${rt}_${vehicleId}`
     const predictions = predictionMap[routeIdVehicleId]
-    const lastUpdateTime = new Date().toISOString()
-    const locationAndPrediction = {
+    const lastUpdateTime = date.getNowInISO()
+    const mph = String(spd)
+    const lastLocation = {}
+    const currentLocation = { lat, lon }
+    const sourceTimestamp = date.getSourceTimestamp(tmstmp)
+    const locationAndPrediction: Dynamo.Vehicle = {
       rt,
       vehicleId,
-      lat,
-      lon,
+      // lat,
+      // lon,
+      mph,
+      destination,
+      lastLocation,
+      currentLocation,
       lastUpdateTime,
       predictions,
+      sourceTimestamp,
     }
     const routeIdVehicleIdItem = { [routeIdVehicleId]: locationAndPrediction }
     return store.concat([routeIdVehicleIdItem])
@@ -417,21 +484,20 @@ export const getPredictionItems = async (
   params: {
     predictionMap: PredictionMap
     dynamodb: Deps["dynamodb"]
+    date: Deps["date"]
   }
 ) => {
-  const { dynamodb, predictionMap } = params
+  const { dynamodb, predictionMap, date } = params
 
   // attempt to get existing active-prediction items
   const predictionItems = await dynamodb.getActivePredictions()
   if (predictionItems.length > 0) return predictionItems
 
-  const predictionList = getPredictionList(vehicles, { predictionMap })
+  const predictionList = getPredictionList(vehicles, { predictionMap, date })
   const chunkedPredictionList = listUtils.chunk(
     predictionList,
     ACTIVE_PREDICTION_SET_SIZE
   )
-
-  print({ chunkedPredictionListLength: chunkedPredictionList.length })
 
   const createdPredictionItems = createPredictionItems(chunkedPredictionList)
   return createdPredictionItems

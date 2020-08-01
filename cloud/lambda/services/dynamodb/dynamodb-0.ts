@@ -69,8 +69,9 @@ export const dynamoServiceProvider = (
       ExpressionAttributeValues: { ":pk": "stop", ":sk": "route_id_" },
     }
     const { Items } = await dynamodb.query(params).promise()
-    const [Item] = Items as Dynamo.VehicleStopItem[]
-    return Item?.stops ?? {}
+    return Items as Dynamo.VehicleStopItem[]
+    // const [Item] = Items as Dynamo.VehicleStopItem[]
+    // return Item?.stops ?? []
     // return { stops, vehicleStopApiCount: 0 }
   }
 
@@ -133,6 +134,23 @@ export const dynamoServiceProvider = (
     }
     const { Items } = await dynamodb.query(params).promise()
     return Items as Dynamo.PredictionItem[]
+  }
+
+  const getMap = async (route: string, direction: string) => {
+    const sk = `map_${route}_${direction}`
+    const KeyConditionExpression = "#pk = :pk AND #sk = :sk"
+    const ExpressionAttributeValues = {
+      ":pk": "route",
+      ":sk": sk,
+    }
+    const params = {
+      TableName,
+      KeyConditionExpression,
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
+    }
+    const { Items } = await dynamodb.query(params).promise()
+    return Items as Dynamo.MapItem[]
   }
 
   /**
@@ -199,6 +217,7 @@ export const dynamoServiceProvider = (
     getVehicleStatus,
     getActivePredictions,
     getDormantPredictions,
+    getMap,
     toPutRequest,
     createItem,
     writeItem,
