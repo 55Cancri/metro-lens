@@ -33,7 +33,6 @@ export const vehicles = (deps: Deps) => async (
     return allVehicles
   }
 
-  // console.log("PREDICTION LENGTH: ", predictions.length)
   const [prediction] = predictions
 
   /* convert the large bus predictions object into an array */
@@ -41,6 +40,11 @@ export const vehicles = (deps: Deps) => async (
 
   /* filter out buses that were last updated more than 5 minutes ago */
   const filteredVehicles = getRecentVehicles(vehicles, { date })
+
+  // const target = filteredVehicles.find(
+  //   (vehicle) => String(vehicle.vehicleId) === "9612"
+  // )
+  // console.log({ target })
 
   return filteredVehicles
 }

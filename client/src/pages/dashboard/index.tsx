@@ -156,7 +156,7 @@ export const DashboardPage: React.FC = () => {
     setMapView(mapData.results)
   }
 
-  console.log({ mapData })
+  // console.log({ mapData })
 
   const history = useHistory()
 
@@ -270,10 +270,20 @@ export const DashboardPage: React.FC = () => {
   const isLoading = loadingLocation || loadingInitialVehicles
   if (isLoading) return <motion.p>Loading...</motion.p>
 
+  const vehicle = "402_7708"
+
   // const target = vehicles.get("402_9700")
   // console.log({ lat: target?.lat, lon: target?.lon })
   console.log(new Date().toLocaleTimeString())
-  console.log({ vehicles })
+  const target = vehicles.get(vehicle)
+  console.log(
+    vehicle,
+    "lat:",
+    target?.currentLocation.lat,
+    "lon:",
+    target?.currentLocation.lon
+  )
+  // console.log({ vehicles })
 
   /* dark mode */
   const hour = new Date().getHours()

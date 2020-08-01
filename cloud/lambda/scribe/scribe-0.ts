@@ -140,12 +140,16 @@ export const scribe = (deps: Deps) => async (
       console.log(
         `Error: failed to save pk:active-prediction sk:${predictionItemId} item with item:`
       )
-      const keys = Object.keys(routes)
-      console.log("keys:", keys, "length:", keys.length)
-      console.log("set length:", new Set(keys).size)
-      console.log(vehicleItem)
       throw new Error(error)
     })
+
+    // if (Number(predictionItemId) === 1) {
+    //   const keys = Object.keys(routes)
+    //   console.log("keys:", keys, "length:", keys.length)
+    //   console.log("set length:", new Set(keys).size)
+    //   console.log(vehicleItem)
+    // }
+
     const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
 
     /* ---------------------- trigger the graphql mutation ---------------------- */

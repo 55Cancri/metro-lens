@@ -73,17 +73,26 @@ export const apiServiceProvider = ({
         /* input types do not need to be defined, just named exactly as schema */
         query: `mutation updateVehiclePositions($input: VehicleInput!) {
           updateVehiclePositions(input: $input) {
-              vehicleId
               rt
-              lat
-              lon
-              lastUpdateTime
+              mph
+              vehicleId
+              destination
+              lastLocation {
+                lat
+                lon
+              }
+              currentLocation {
+                lat
+                lon
+              }
               predictions {
                   arrivalIn
                   arrivalTime
                   stopId
                   stopName
               }
+              sourceTimestamp
+              lastUpdateTime
           }
       }`,
         variables: { input: { predictionGroupId } },
