@@ -444,7 +444,10 @@ export const createVehicleStruct = (
  */
 const getPredictionList = (
   vehicles: Api.ConnectorVehicleOrError[],
-  { predictionMap, date }: { predictionMap: PredictionMap; date: Deps["date"] }
+  {
+    apiPredictionMap,
+    date,
+  }: { apiPredictionMap: PredictionMap; date: Deps["date"] }
 ) =>
   vehicles.reduce((store, vehicle) => {
     if ("msg" in vehicle) return store
@@ -459,7 +462,7 @@ const getPredictionList = (
     } = vehicle
     // treat all `routeIdVehicleIds` as a single unique vehicle
     const routeIdVehicleId = `${rt}_${vehicleId}`
-    const vehiclePredictions = predictionMap[routeIdVehicleId]
+    const vehiclePredictions = apiPredictionMap[routeIdVehicleId]
     const { routeDirection, predictions } = getDirectionAndPredictions(
       vehiclePredictions ?? []
     )
@@ -515,25 +518,72 @@ const createPredictionItems = (chunkedPredictionList: Dynamo.Routes[][]) =>
  * or recreate them from the api vehicles and the prediction map.
  */
 export const getPredictionItems = async (
-  vehicles: Api.ConnectorVehicleOrError[],
+  active: Dynamo.Status,
   params: {
-    predictionMap: PredictionMap
+    vehicles: Api.ConnectorVehicleOrError[]
+    apiPredictionMap: PredictionMap
     dynamodb: Deps["dynamodb"]
     date: Deps["date"]
   }
 ) => {
-  const { dynamodb, predictionMap, date } = params
+  const { vehicles, apiPredictionMap, dynamodb, date } = params
 
   // attempt to get existing active-prediction items
   const predictionItems = await dynamodb.getActivePredictions()
   if (predictionItems.length > 0) return predictionItems
 
-  const predictionList = getPredictionList(vehicles, { predictionMap, date })
-  const chunkedPredictionList = listUtils.chunk(
-    predictionList,
-    ACTIVE_PREDICTION_SET_SIZE
-  )
+  // create the nested "prediction" property for each api vehicle
+  const predictionList = getPredictionList(vehicles, {
+    apiPredictionMap: apiPredictionMap,
+    date,
+  })
+  Object.entries(active).reduce((store, [predictionGroupId, vehicleStatusGroup]) => {
+
+    const vehicleIdsOfStatusGroup = Object.keys(vehicleStatusGroup)
+
+    vehicleIdsOfStatusGroup.map(())
+
+
+    const entity = "active-predictions"
+    const id = String(predictionGroupId)
+    const item = { entity, id, routes, allVehicles }
+    return [...store, item]
+  }, [])
+
+  // const chunkedPredictionList = listUtils.chunk(
+  //   predictionList,
+  //   ACTIVE_PREDICTION_SET_SIZE
+  // )
 
   const createdPredictionItems = createPredictionItems(chunkedPredictionList)
   return createdPredictionItems
 }
+
+// OLD VERSION
+// export const getPredictionItems = async (
+//   active: Dynamo.Status,
+//   params: {
+//     vehicles: Api.ConnectorVehicleOrError[]
+//     apiPredictionMap: PredictionMap
+//     dynamodb: Deps["dynamodb"]
+//     date: Deps["date"]
+//   }
+// ) => {
+//   const { vehicles, apiPredictionMap, dynamodb, date } = params
+
+//   // attempt to get existing active-prediction items
+//   const predictionItems = await dynamodb.getActivePredictions()
+//   if (predictionItems.length > 0) return predictionItems
+
+//   const predictionList = getPredictionList(vehicles, {
+//     apiPredictionMap: apiPredictionMap,
+//     date,
+//   })
+//   const chunkedPredictionList = listUtils.chunk(
+//     predictionList,
+//     ACTIVE_PREDICTION_SET_SIZE
+//   )
+
+//   const createdPredictionItems = createPredictionItems(chunkedPredictionList)
+//   return createdPredictionItems
+// }

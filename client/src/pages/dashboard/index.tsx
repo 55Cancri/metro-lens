@@ -192,7 +192,7 @@ export const DashboardPage: React.FC = () => {
   //   "lon:",
   //   target?.currentLocation.lon
   // )
-  console.log({ vehicles, routeColors })
+  console.log({ vehicles })
 
   /* dark mode */
   const hour = new Date().getHours()

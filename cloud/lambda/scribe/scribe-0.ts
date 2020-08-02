@@ -101,13 +101,16 @@ export const scribe = (deps: Deps) => async (
   })
 
   /* create the predictions map */
-  const predictionMap = scribeUtils.createPredictionMap(predictions, { date })
+  const apiPredictionMap = scribeUtils.createPredictionMap(predictions, {
+    date,
+  })
 
   // /* get the array of prediction items */
   // const predictionItems = await dynamodb.getActivePredictions()
-  const predictionItems = await scribeUtils.getPredictionItems(vehicles, {
+  const predictionItems = await scribeUtils.getPredictionItems(active, {
     dynamodb,
-    predictionMap,
+    vehicles,
+    apiPredictionMap,
     date,
   })
 
@@ -168,7 +171,7 @@ export const scribe = (deps: Deps) => async (
     // TODO: somehow, only the unused vehicles should be returned, that way
     // TODO: you can later create new prediction items with the leftovers
     return flattenedPredictions
-  }, Promise.resolve(predictionMap))
+  }, Promise.resolve(apiPredictionMap))
 
   /* ---------------------- count the number of api calls --------------------- */
 
