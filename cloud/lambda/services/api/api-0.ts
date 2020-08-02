@@ -216,15 +216,6 @@ export const apiServiceProvider = ({
       {}
     )
 
-    // /* create a map of the active vehicles returned from the api call */
-    // const activeVehicles = vehicles.reduce(
-    //   (store, vehicle) => ({
-    //     ...store,
-    //     [vehicle.vid]: { isActive: true, wentOffline: null },
-    //   }),
-    //   {}
-    // )
-
     const statusOfVehicles = {
       active: activeVehicles,
       dormant: {},

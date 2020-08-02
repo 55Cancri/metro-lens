@@ -1,4 +1,4 @@
-import R from "ramda"
+import * as R from "ramda"
 
 import * as Api from "../types/api"
 import * as Dynamo from "../services/dynamodb/types"
@@ -337,9 +337,7 @@ const getDirectionAndPredictions = (
   vehiclePredictions: Dynamo.PredictionWithDirection[]
 ) => {
   const { routeDirection } = vehiclePredictions[0] ?? {}
-  const predictions = vehiclePredictions.map(
-    ({ routeDirection, ...vehiclePrediction }) => vehiclePrediction
-  )
+  const predictions = vehiclePredictions.map(R.omit(["routeDirection"]))
   return { routeDirection, predictions }
 }
 
@@ -409,6 +407,7 @@ export const createVehicleStruct = (
     const vehiclePredictions = predictionMap[
       routeIdVehicleId
     ] as Dynamo.PredictionWithDirection[]
+
     const { routeDirection, predictions } = getDirectionAndPredictions(
       vehiclePredictions ?? []
     )
@@ -547,32 +546,3 @@ export const getPredictionItems = async (
 
   return createPredictionItems(active, { apiRouteVehicleMap })
 }
-
-// OLD VERSION
-// export const getPredictionItems = async (
-//   active: Dynamo.Status,
-//   params: {
-//     vehicles: Api.ConnectorVehicleOrError[]
-//     apiPredictionMap: PredictionMap
-//     dynamodb: Deps["dynamodb"]
-//     date: Deps["date"]
-//   }
-// ) => {
-//   const { vehicles, apiPredictionMap, dynamodb, date } = params
-
-//   // attempt to get existing active-prediction items
-//   const predictionItems = await dynamodb.getActivePredictions()
-//   if (predictionItems.length > 0) return predictionItems
-
-//   const predictionList = getPredictionList(vehicles, {
-//     apiPredictionMap: apiPredictionMap,
-//     date,
-//   })
-//   const chunkedPredictionList = listUtils.chunk(
-//     predictionList,
-//     ACTIVE_PREDICTION_SET_SIZE
-//   )
-
-//   const createdPredictionItems = createPredictionItems(chunkedPredictionList)
-//   return createdPredictionItems
-// }

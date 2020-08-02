@@ -29,10 +29,11 @@ export const auditor = (deps: Deps) => async (
   /* --------------------- update the vehicle status item --------------------- */
 
   /* check dynamo for maps, stops, and vehicle status */
-  const vehicleStatus = await dynamodb.getVehicleStatus()
+  const statusOfVehicles = await dynamodb.getVehicleStatus()
+  // const vehicleStatus = await dynamodb.getVehicleStatus()
 
   /* parse out the active and dormant statuses */
-  const { statusOfVehicles } = vehicleStatus
+  // const { statusOfVehicles } = vehicleStatus
   const { active, dormant } = statusOfVehicles
   const activeVehicleEntries = Object.entries(active)
   const dormantVehicleEntries = Object.entries(dormant)

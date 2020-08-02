@@ -196,6 +196,8 @@ export type ApiCountTodayItem = PrimaryKey & { apiCount: number }
 
 export type ApiCountTotalItem = PrimaryKey & { apiCountTotal: number }
 
+export type VehicleScannerItem = PrimaryKey & { nextExecutionTime: string }
+
 export type PutItemInput = aws.DynamoDB.PutItemInput
 
 export type PutRequest = { PutRequest: { Item: BusStatusItem } }

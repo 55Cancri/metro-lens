@@ -17,7 +17,7 @@ const USERNAME_SORT_KEY = process.env.USERNAME_SORT_KEY || ""
 export const dynamoServiceProvider = (
   deps: Dynamo.DynamoServiceProviderProps
 ) => {
-  const { dynamodb } = deps
+  const { dynamodb, date } = deps
 
   const TableName = TABLE_NAME
   const KeyConditionExpression = "#pk = :pk AND #sk = :sk"
@@ -40,6 +40,32 @@ export const dynamoServiceProvider = (
       return item.apiCountTotal as number
     }
     return 0
+  }
+
+  /**
+   * Determine when to query all vehicles.
+   */
+  const getVehicleScannerTime = async () => {
+    const ExpressionAttributeValues = { ":pk": "vehicle", ":sk": "scanner" }
+    const params = {
+      TableName,
+      KeyConditionExpression,
+      ExpressionAttributeNames,
+      ExpressionAttributeValues,
+    }
+    const { Items } = await dynamodb.query(params).promise()
+    if (Items && Items.length > 0) {
+      const [Item] = Items as [Dynamo.VehicleScannerItem]
+      return Item
+    }
+    const nextExecutionTime = date.getRandomTime(date.setToNextDay())
+    const Item = {
+      [PARTITION_KEY]: "vehicle",
+      [SORT_KEY]: "scanner",
+      nextExecutionTime,
+    }
+    await dynamodb.put({ TableName, Item }).promise()
+    return Item
   }
 
   /**
@@ -89,13 +115,7 @@ export const dynamoServiceProvider = (
     }
     const { Items } = await dynamodb.query(params).promise()
     const [Item] = Items as [Dynamo.VehicleStatusItem]
-    // const hasActiveAndDormant = Item?.active && Item?.dormant
-    // const statusOfVehicles = (hasActiveAndDormant
-    //   ? Item
-    //   : {}) as Dynamo.VehicleStatusItem
-    // const hasActiveAndDormant = Item?.active && Item?.dormant
-    const statusOfVehicles = Item as Dynamo.VehicleStatusItem
-    return { statusOfVehicles, routeApiCount: 0 }
+    return Item as Dynamo.VehicleStatusItem
   }
 
   /**
@@ -212,6 +232,7 @@ export const dynamoServiceProvider = (
 
   return {
     getApiCountTotal,
+    getVehicleScannerTime,
     getMapMarkers,
     getVehicleStops,
     getVehicleStatus,
