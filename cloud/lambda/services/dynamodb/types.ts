@@ -16,6 +16,8 @@ export type CreateItemParams = {
 export type Item = Record<string, unknown>
 
 export type VehicleStatus = {
+  routeId: string
+  vehicleId: string
   isActive: boolean
   wentOffline: string | null
   predictionGroupId?: string

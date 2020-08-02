@@ -442,7 +442,7 @@ export const createVehicleStruct = (
  * @param vehicles
  * @param param1
  */
-const getPredictionList = (
+const getApiRouteVehicleMap = (
   vehicles: Api.ConnectorVehicleOrError[],
   {
     apiPredictionMap,
@@ -483,35 +483,41 @@ const getPredictionList = (
       predictions,
       sourceTimestamp,
     }
-    const routeIdVehicleIdItem = { [routeIdVehicleId]: locationAndPrediction }
-    return store.concat([routeIdVehicleIdItem])
-  }, [] as Dynamo.Routes[])
+    return { ...store, [routeIdVehicleId]: locationAndPrediction }
+    // return store.concat([routeIdVehicleIdItem])
+  }, {} as Dynamo.Routes)
 
 /**
  * Map the routeIdVehicleId objects into active-prediction items.
  * @param chunkedPredictionList
  */
-const createPredictionItems = (chunkedPredictionList: Dynamo.Routes[][]) =>
-  chunkedPredictionList.map((predictionChunk, i) => {
-    type InitialState = { routes: Dynamo.Routes; allVehicles: string[] }
-    const predictionItemId = i + 1
+const createPredictionItems = (
+  active: Dynamo.Status,
+  { apiRouteVehicleMap }: { apiRouteVehicleMap: Dynamo.Routes }
+) =>
+  // get the actual route vehicle data and include the prediction property
+  Object.entries(active).reduce(
+    (store, [predictionGroupId, vehicleStatusGroup]) => {
+      // routeIdVehicleIds of status group
+      const routeIdVehicleIds = Object.values(vehicleStatusGroup).map(
+        ({ routeId, vehicleId }) => `${routeId}_${vehicleId}`
+      )
+      // const routeIdVehicleIds = Object.keys(vehicleStatusGroup)
+      const routes = routeIdVehicleIds.reduce((store, routeIdVehicleId) => {
+        // will include vehicle tracking and predictions
+        const routeVehicle = apiRouteVehicleMap[routeIdVehicleId]
+        return routeVehicle
+          ? { ...store, [routeIdVehicleId]: routeVehicle }
+          : store
+      }, {} as Dynamo.Routes)
 
-    const { routes, allVehicles } = predictionChunk.reduce(
-      (store, routeIdVehicleId) => {
-        const [[key, vehicle]] = Object.entries(routeIdVehicleId)
-        const updatedRoutes = { ...store.routes, [key]: vehicle }
-        const [, vehicleId] = key.split("_")
-        const updatedVehicles = store.allVehicles.concat([vehicleId])
-        return { routes: updatedRoutes, allVehicles: updatedVehicles }
-      },
-      { routes: {}, allVehicles: [] } as InitialState
-    )
-
-    const entity = "active-predictions"
-    const id = String(predictionItemId)
-    const item = { entity, id, routes, allVehicles }
-    return item
-  })
+      const entity = "active-predictions"
+      const id = String(predictionGroupId)
+      const item = { entity, id, routes, allVehicles: routeIdVehicleIds }
+      return [...store, item]
+    },
+    [] as Dynamo.PredictionItem[]
+  )
 
 /**
  * Get the active-prediction items from the database if they exist,
@@ -533,30 +539,13 @@ export const getPredictionItems = async (
   if (predictionItems.length > 0) return predictionItems
 
   // create the nested "prediction" property for each api vehicle
-  const predictionList = getPredictionList(vehicles, {
+  // switch key to routeIdVehicleId from vehicleId for easy lookup
+  const apiRouteVehicleMap = getApiRouteVehicleMap(vehicles, {
     apiPredictionMap: apiPredictionMap,
     date,
   })
-  Object.entries(active).reduce((store, [predictionGroupId, vehicleStatusGroup]) => {
 
-    const vehicleIdsOfStatusGroup = Object.keys(vehicleStatusGroup)
-
-    vehicleIdsOfStatusGroup.map(())
-
-
-    const entity = "active-predictions"
-    const id = String(predictionGroupId)
-    const item = { entity, id, routes, allVehicles }
-    return [...store, item]
-  }, [])
-
-  // const chunkedPredictionList = listUtils.chunk(
-  //   predictionList,
-  //   ACTIVE_PREDICTION_SET_SIZE
-  // )
-
-  const createdPredictionItems = createPredictionItems(chunkedPredictionList)
-  return createdPredictionItems
+  return createPredictionItems(active, { apiRouteVehicleMap })
 }
 
 // OLD VERSION

@@ -93,12 +93,14 @@ export const getVehicleStatusItem = (
   awakenedVehiclesId.reduce((store, vehicleId, i) => {
     const errorKey = `error-getting-prediction-item-id-${i}`
     /* get the prediction id of the vehicle from the flattened vehicle status */
-    const { predictionGroupId = errorKey } = flatVehicleStatus[vehicleId]
+    const { predictionGroupId = errorKey, ...rest } = flatVehicleStatus[
+      vehicleId
+    ]
     // const { predictionItemId } = flatVehicleStatus[vehicle.vid]
 
     /* get the previous state of this prediction */
     const predictionItem = store[predictionGroupId]
-    const activeStatus = { isActive: true, wentOffline: null }
+    const activeStatus = { ...rest, isActive: true, wentOffline: null }
     return {
       ...store,
       [predictionGroupId]: { ...predictionItem, [vehicleId]: activeStatus },

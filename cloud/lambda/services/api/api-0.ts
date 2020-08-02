@@ -201,12 +201,17 @@ export const apiServiceProvider = ({
         const predictionItem = vehicleChunk.reduce(
           (innerStore, vehicle) => ({
             ...innerStore,
-            [vehicle.vid]: { isActive: true, wentOffline: null },
+            [vehicle.vid]: {
+              routeId: vehicle.rt,
+              vehicleId: vehicle.vid,
+              isActive: true,
+              wentOffline: null,
+            },
           }),
           {}
         )
 
-        return { ...store, [predictionItemId]: predictionItem }
+        return { ...store, [predictionItemId + 1]: predictionItem }
       },
       {}
     )

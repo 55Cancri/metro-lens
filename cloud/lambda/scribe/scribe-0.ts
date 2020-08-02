@@ -105,14 +105,13 @@ export const scribe = (deps: Deps) => async (
     date,
   })
 
-  // /* get the array of prediction items */
-  // const predictionItems = await dynamodb.getActivePredictions()
-  const predictionItems = await scribeUtils.getPredictionItems(active, {
-    dynamodb,
-    vehicles,
-    apiPredictionMap,
-    date,
-  })
+  const predictionItemDeps = { dynamodb, vehicles, apiPredictionMap, date }
+
+  // use the active status as a foundation to generate prediction items
+  const predictionItems = await scribeUtils.getPredictionItems(
+    active,
+    predictionItemDeps
+  )
 
   await predictionItems.reduce(async (store, pastItem) => {
     const flattenedPredictions = await store
@@ -145,13 +144,6 @@ export const scribe = (deps: Deps) => async (
       )
       throw new Error(error)
     })
-
-    // if (Number(predictionItemId) === 1) {
-    //   const keys = Object.keys(routes)
-    //   console.log("keys:", keys, "length:", keys.length)
-    //   console.log("set length:", new Set(keys).size)
-    //   console.log(vehicleItem)
-    // }
 
     const saveHistory = dynamodb.writeHistoryItem(vehicleHistoryItem)
 
