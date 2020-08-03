@@ -390,7 +390,9 @@ export const createVehicleStruct = (
   )
 
   return currentVehicles.reduce((store, vehicle) => {
+    // return early on errors
     if ("msg" in vehicle) return store
+
     const {
       rt,
       vid: vehicleId,
@@ -401,6 +403,10 @@ export const createVehicleStruct = (
       tmstmp,
     } = vehicle
     const routeIdVehicleId = `${rt}_${vehicleId}`
+    const inPastItem = store[routeIdVehicleId as keyof typeof store]
+
+    // key to stopping duplicate items in each prediction item
+    if (!inPastItem) return store
 
     // get the array of predictions for the route-vehicle id
     const mph = String(spd)
@@ -411,6 +417,10 @@ export const createVehicleStruct = (
     const { routeDirection, predictions } = getDirectionAndPredictions(
       vehiclePredictions ?? []
     )
+
+    // key to preventing items without predictions from getting in the group items
+    if (predictions.length <= 0) return store
+
     const lastLocation = {}
     const currentLocation = { lat, lon }
     const lastUpdateTime = date.getNowInISO()
@@ -428,10 +438,8 @@ export const createVehicleStruct = (
       predictions,
       sourceTimestamp,
     }
-    if (predictions.length > 0) {
-      return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
-    }
-    return store
+
+    return { ...store, [routeIdVehicleId]: updatedLocationAndPrediction }
   }, filteredPastRoutes)
 }
 

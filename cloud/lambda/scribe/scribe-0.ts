@@ -3,13 +3,12 @@ import { winston, print } from "../utils/unicorns"
 
 /* import utils */
 import * as apiUtils from "../utils/api"
-import * as objectUtils from "../utils/objects"
 import * as listUtils from "../utils/lists"
+import * as scribeUtils2 from "./scribe-utils"
 import * as scribeUtils from "./utils"
 
 /* import types */
-import { Deps, DynamoDep, DateDep } from "../depency-injector"
-import * as Dynamo from "../services/dynamodb/types"
+import { Deps } from "../depency-injector"
 import * as Api from "../types/api"
 
 /* define the constants */
@@ -30,226 +29,15 @@ export const scribe = (deps: Deps) => async (
 
   /* define the api params in case the api call needs to be made */
   const params = { key: CONNECTOR_KEY, format: "json" } as const
-  // const statusItemIsEmpty = objectUtils.objectIsEmpty(
-  //   previousVehicleStatusItem.statusOfVehicles
-  // )
-  // const vehicleStatus = statusItemIsEmpty
-  //   ? await api.getActiveVehicles(params)
-  //   : previousVehicleStatusItem
-  // const { statusOfVehicles, routeApiCount } = vehicleStatus
 
-  /**
-   *
-   *
-   *
-   * @param previousVehicleStatusItem
-   */
-
-  const reorganizeVehicleStatus = async (
-    previousVehicleStatusItem: Dynamo.VehicleStatusItem,
-    { dynamodb, date }: DynamoDep & DateDep
-  ) => {
-    const statusItemIsEmpty = objectUtils.objectIsEmpty(
-      previousVehicleStatusItem
-    )
-
-    // always query every vehicle if the status is empty
-    if (statusItemIsEmpty) {
-      return api.getActiveVehicles(params)
-    }
-
-    const { active, dormant } = previousVehicleStatusItem
-    const activePredictionItems = Object.values(active)
-    const dormantPredictionItems = Object.values(dormant)
-    const predictionItems = activePredictionItems.concat(dormantPredictionItems)
-    const statusOfEveryVehicle = predictionItems.reduce(
-      (store, statusGroup) => store.concat(Object.values(statusGroup)),
-      [] as Dynamo.VehicleStatus[]
-    )
-
-    const vehicleScanTimeItem = await dynamodb.getVehicleScannerTime()
-    const { nextExecutionTime } = vehicleScanTimeItem
-
-    // is execution time within 4 minute window
-    const executionTimeIsNow = date.isWithinWindow(nextExecutionTime)
-
-    /**
-     * Sort on vehicleId.
-     * @param a
-     * @param b
-     */
-    const onVehicleId = (
-      a: Dynamo.VehicleStatus,
-      b: Dynamo.VehicleStatus
-      // a: Dynamo.PredictionStatus,
-      // b: Dynamo.PredictionStatus
-    ) => {
-      return Number(a.vehicleId) - Number(b.vehicleId)
-
-      // const [vehicleIdA] = Object.keys(a)
-      // const [vehicleIdB] = Object.keys(b)
-      // return Number(vehicleIdA) - Number(vehicleIdB)
-    }
-
-    print({ vehicleScanTimeItem })
-
-    if (executionTimeIsNow) {
-      const { statusOfVehicles, routeApiCount } = await api.getActiveVehicles(
-        params
-      )
-      const { active } = statusOfVehicles
-      const apiPredictionItems = Object.values(active)
-      const statusOfApiVehicles = apiPredictionItems.reduce(
-        (store, statusGroup) => store.concat(Object.values(statusGroup)),
-        [] as Dynamo.VehicleStatus[]
-      )
-
-      const status = statusOfApiVehicles.reduce(
-        (store, vehicleStatus, i, array) => {
-          const isLastItem = i === array.length - 1
-          // const [status] = Object.values(vehicleStatus)
-          const vehicleUpdated3DaysAgo = date.elapsedDaysGreaterThan(
-            vehicleStatus?.wentOffline,
-            3
-          )
-          const dormant = !isLastItem
-            ? store.dormant.concat([vehicleStatus])
-            : store.dormant.concat([vehicleStatus]).sort(onVehicleId)
-          const active = !isLastItem
-            ? store.active.concat([vehicleStatus])
-            : store.active.concat([vehicleStatus]).sort(onVehicleId)
-          return vehicleUpdated3DaysAgo
-            ? { ...store, dormant }
-            : { ...store, active }
-        },
-        { active: [], dormant: [] } as {
-          active: Dynamo.VehicleStatus[]
-          dormant: Dynamo.VehicleStatus[]
-        }
-      )
-
-      // TODO: change to active vehicle size
-      const chunkedActive = listUtils.chunk(status.active, 25)
-      const chunkedDormant = listUtils.chunk(status.dormant, 25)
-
-      const newActive = chunkedActive.reduce((store, vehicleStatusChunk, i) => {
-        const predictionItemId = i + 1
-        const everyVehicleStatus = vehicleStatusChunk.reduce(
-          (innerStore, vehicleStatus) => ({
-            ...innerStore,
-            [vehicleStatus.vehicleId]: vehicleStatus,
-          }),
-          {} as Dynamo.PredictionStatus
-        )
-        return { ...store, [predictionItemId]: everyVehicleStatus }
-      }, {} as Dynamo.Status)
-
-      const newDormant = chunkedDormant.reduce(
-        (store, vehicleStatusChunk, i) => {
-          const predictionItemId = i + 1
-          const everyVehicleStatus = vehicleStatusChunk.reduce(
-            (innerStore, vehicleStatus) => ({
-              ...innerStore,
-              [vehicleStatus.vehicleId]: vehicleStatus,
-            }),
-            {} as Dynamo.PredictionStatus
-          )
-          return { ...store, [predictionItemId]: everyVehicleStatus }
-        },
-        {} as Dynamo.Status
-      )
-
-      const updatedVehicleScanTimeItem = {
-        ...vehicleScanTimeItem,
-        nextExecutionTime: date.getRandomTime(date.setToNextDay()),
-      }
-      await dynamodb.writeItem(updatedVehicleScanTimeItem)
-
-      return {
-        statusOfVehicles: {
-          ...statusOfVehicles,
-          active: newActive,
-          dormant: newDormant,
-        },
-        routeApiCount,
-      }
-    }
-
-    /**
-     * Distribute vehicles between active and dormant based on when
-     * they last went offline and sort in numerical order by vehicleId
-     */
-    const status = statusOfEveryVehicle.reduce(
-      (store, vehicleStatus, i, array) => {
-        const isLastItem = i === array.length - 1
-        // const [status] = Object.values(vehicleStatus)
-        const vehicleUpdated3DaysAgo = date.elapsedDaysGreaterThan(
-          vehicleStatus.wentOffline,
-          3
-        )
-        const dormant = !isLastItem
-          ? store.dormant.concat([vehicleStatus])
-          : store.dormant.concat([vehicleStatus]).sort(onVehicleId)
-        const active = !isLastItem
-          ? store.active.concat([vehicleStatus])
-          : store.active.concat([vehicleStatus]).sort(onVehicleId)
-        return vehicleUpdated3DaysAgo
-          ? { ...store, dormant }
-          : { ...store, active }
-      },
-      { active: [], dormant: [] } as {
-        active: Dynamo.VehicleStatus[]
-        dormant: Dynamo.VehicleStatus[]
-      }
-    )
-
-    // TODO: change to active vehicle size
-    const chunkedActive = listUtils.chunk(status.active, 25)
-    const chunkedDormant = listUtils.chunk(status.dormant, 25)
-
-    const newActive = chunkedActive.reduce((store, vehicleStatusChunk, i) => {
-      const predictionItemId = i + 1
-      const everyVehicleStatus = vehicleStatusChunk.reduce(
-        (innerStore, vehicleStatus) => ({
-          ...innerStore,
-          [vehicleStatus.vehicleId]: vehicleStatus,
-        }),
-        {} as Dynamo.PredictionStatus
-      )
-      return { ...store, [predictionItemId]: everyVehicleStatus }
-    }, {} as Dynamo.Status)
-
-    const newDormant = chunkedDormant.reduce((store, vehicleStatusChunk, i) => {
-      const predictionItemId = i + 1
-      const everyVehicleStatus = vehicleStatusChunk.reduce(
-        (innerStore, vehicleStatus) => ({
-          ...innerStore,
-          [vehicleStatus.vehicleId]: vehicleStatus,
-        }),
-        {} as Dynamo.PredictionStatus
-      )
-      return { ...store, [predictionItemId]: everyVehicleStatus }
-    }, {} as Dynamo.Status)
-
-    return {
-      statusOfVehicles: {
-        ...previousVehicleStatusItem,
-        active: newActive,
-        dormant: newDormant,
-      },
-      routeApiCount: 0,
-    }
-  }
-
-  const { statusOfVehicles, routeApiCount } = await reorganizeVehicleStatus(
+  const reorganizationDeps = { ...deps, params }
+  const {
+    statusOfVehicles,
+    routeApiCount,
+  } = await scribeUtils2.reorganizeVehicleStatus(
     previousVehicleStatusItem,
-    {
-      dynamodb,
-      date,
-    }
+    reorganizationDeps
   )
-
-  // print({ active: statusOfVehicles.active })
 
   const flatStatusItem = scribeUtils.flattenStatusItem(statusOfVehicles)
   const activeVehicleIds = scribeUtils.getVehicleIds(flatStatusItem)
@@ -315,6 +103,11 @@ export const scribe = (deps: Deps) => async (
 
   const predictionItemDeps = { dynamodb, vehicles, apiPredictionMap, date }
 
+  // Object.values(active).map((v) => {
+  //   const keys = Object.keys(v)
+  //   console.log({ groupLength: keys.length })
+  // })
+
   // use the active status as a foundation to generate prediction items
   const predictionItems = await scribeUtils.getPredictionItems(
     active,
@@ -329,6 +122,9 @@ export const scribe = (deps: Deps) => async (
       pastVehicles: pastItem,
       date,
     })
+
+    const predNumKeys = Object.keys(routes).length
+    console.log(predictionItemId, ":", predNumKeys)
 
     const vehicleItem = dynamodb.createItem({
       pk: "active-predictions",

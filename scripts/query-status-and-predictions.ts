@@ -16,11 +16,6 @@ const TableName = "metro"
 type ParamKey = "status" | "active-predictions"
 
 const getParams = (key: ParamKey): Dynamo.QueryParams => {
-  // ExpressionAttributeNames: sk
-  //   ? { "#pk": "entity", "#sk": "id" }
-  //   : { "#pk": "entity" }
-  // ExpressionAttributeValues: { ":pk": pk, ...(sk ? { ":sk": sk } : {}) }
-
   if (key === "status") {
     return {
       TableName,
@@ -63,15 +58,6 @@ const run = async () => {
     const routeIdVehicleIds = Object.keys(routes).join(",")
     console.log(id, ":", routeIdVehicleIds)
   })
-
-  // const {
-  //   Items: oldPredictionResponseItems,
-  // } = (vehicleOldPredictionResults as unknown) as VehiclePredictionItem
-  // const {
-  //   Items: newPredictionResponseItems,
-  // } = (vehicleNewPredictionsResults as unknown) as {
-  //   Items: { entity: "active-predictions"; id: string }[]
-  // }
 }
 
 const complete = () => console.log("Done.")

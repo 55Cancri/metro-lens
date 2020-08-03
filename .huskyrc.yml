@@ -1,4 +1,4 @@
 hooks:
   post-commit: ./test.sh
   commit-msg: commitlint -E HUSKY_GIT_PARAMS
-  pre-push: ./test.sh
+  # pre-push: ./test.sh
