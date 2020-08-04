@@ -2,7 +2,7 @@ import * as R from "ramda"
 
 import * as Api from "../types/api"
 import * as Dynamo from "../services/dynamodb/types"
-import { Deps } from "../depency-injector"
+import { Deps, DateDep } from "../depency-injector"
 
 import * as unicornUtils from "../utils/unicorns"
 import * as listUtils from "../utils/lists"
@@ -341,6 +341,24 @@ const getDirectionAndPredictions = (
   return { routeDirection, predictions }
 }
 
+const filterPastRoutes = (routes: Dynamo.Routes, { date }: DateDep) =>
+  Object.entries(routes).reduce((store, routeVehicle) => {
+    const [routeIdVehicleId, vehicle] = routeVehicle as [string, Dynamo.Vehicle]
+    // const differenceInHours = date.getDifferenceInDays(
+    //   new Date(),
+    //   new Date(vehicle.lastUpdateTime)
+    // )
+    // const absoluteDifferenceInHours = Math.abs(differenceInHours)
+    // const recentlyUpdated = absoluteDifferenceInHours < 3
+    const hasPredictions = vehicle.predictions && vehicle.predictions.length > 0
+    const hasRouteDirection = vehicle.routeDirection
+
+    return hasPredictions && hasRouteDirection
+      ? // return recentlyUpdated && hasPredictions && hasRouteDirection
+        { ...store, [routeIdVehicleId]: vehicle }
+      : store
+  }, {} as Dynamo.Routes)
+
 /**
  * Create a new prediction item.
  * NOTE: only the updated vehicles should have their
@@ -366,28 +384,7 @@ export const createVehicleStruct = (
   /**
    * Limit the size of the prediction objects based on expiration time.
    */
-  const filteredPastRoutes = Object.entries(pastVehicles.routes).reduce(
-    (store, routeVehicle) => {
-      const [routeIdVehicleId, vehicle] = routeVehicle as [
-        string,
-        Dynamo.Vehicle
-      ]
-      const differenceInHours = date.getDifferenceInHours(
-        new Date(),
-        new Date(vehicle.lastUpdateTime)
-      )
-      const absoluteDifferenceInHours = Math.abs(differenceInHours)
-      const recentlyUpdated = absoluteDifferenceInHours < 12
-      const hasPredictions =
-        vehicle.predictions && vehicle.predictions.length > 0
-      const hasRouteDirection = vehicle.routeDirection
-
-      return recentlyUpdated && hasPredictions && hasRouteDirection
-        ? { ...store, [routeIdVehicleId]: vehicle }
-        : store
-    },
-    {}
-  )
+  const filteredPastRoutes = filterPastRoutes(pastVehicles.routes, { date })
 
   return currentVehicles.reduce((store, vehicle) => {
     // return early on errors

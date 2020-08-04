@@ -116,15 +116,20 @@ export const scribe = (deps: Deps) => async (
 
   await predictionItems.reduce(async (store, pastItem) => {
     const flattenedPredictions = await store
-    const { id: predictionItemId, allVehicles } = pastItem
+    const { id: predictionItemId } = pastItem
     const routes = scribeUtils.createVehicleStruct(flattenedPredictions, {
       currentVehicles: vehicles,
       pastVehicles: pastItem,
       date,
     })
 
-    const predNumKeys = Object.keys(routes).length
-    console.log(predictionItemId, ":", predNumKeys)
+    const allVehicles = Object.keys(routes).length
+
+    // const numOfVids = allVehicles.length
+    // const numOfPastVids = Object.keys(pastItem.routes).length
+    // console.log("group id:", predictionItemId)
+    // console.log("num of vids in past route (item):", numOfPastVids)
+    // console.log("num of vids in new route:", numOfVids)
 
     const vehicleItem = dynamodb.createItem({
       pk: "active-predictions",

@@ -88,6 +88,7 @@ export class MetroLensStack extends cdk.Stack {
         tableName: "metro-hist",
         partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
         sortKey: { name: "archiveTime", type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: "TTL",
         billingMode: dynamodb.BillingMode.PROVISIONED,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }

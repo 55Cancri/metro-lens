@@ -81,6 +81,14 @@ export const dateServiceProvider = () => {
   const getDifferenceInHours = (date1: Date, date2: Date) =>
     differenceInHours(date1, date2)
 
+  /**
+   * Get the different in hours between two dates.
+   * @param date1
+   * @param date2
+   */
+  const getDifferenceInDays = (date1: Date, date2: Date) =>
+    differenceInDays(date1, date2)
+
   const getStartOfDay = ({ date = new Date(), asString = true } = {}) => {
     const time = startOfDay(date)
     return asString ? time.toISOString : time
@@ -184,6 +192,7 @@ export const dateServiceProvider = () => {
     elapsedDaysGreaterThan,
     getEpochTimeIn5Minutes,
     getDifferenceInHours,
+    getDifferenceInDays,
     setTTLExpirationIn,
     getSourceTimestamp,
     getStartOfDay,
