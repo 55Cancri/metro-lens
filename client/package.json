@@ -43,7 +43,7 @@
     "apollo-link-http": "^1.5.17",
     "aws-appsync-auth-link": "^2.0.2",
     "aws-appsync-subscription-link": "^2.2.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "color": "^3.1.2",
     "date-fns": "^2.15.0",
     "facepaint": "^1.2.1",
